@@ -1,0 +1,285 @@
+{% extends 'rescanai/base.html' %}
+
+{% block title %}Scan Results - #{{ scan.id }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 100%; margin: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="color: #00FF9C; margin: 0;">Scan Results - #{{ scan.id }}</h2>
+        <a href="{% url 'rescanai:index' %}" style="color: #8B949E; text-decoration: none;">← Back to Dashboard</a>
+    </div>
+
+    <!-- Target Summary Panel -->
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2); margin-bottom: 20px;">
+        <h3 style="color: #00FF9C; margin-bottom: 20px;">Target Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Target</div>
+                <div style="color: #00BFFF; font-size: 1.2em; font-weight: bold;">{{ scan.target.target_value }}</div>
+                <div style="color: #8B949E; font-size: 0.85em; margin-top: 3px;">{{ scan.target.name }}</div>
+            </div>
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Scan Type</div>
+                <div style="color: #E6EDF3; font-size: 1.2em; font-weight: bold;">{{ scan.scan_type|upper }}</div>
+            </div>
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Scan Timestamp</div>
+                <div style="color: #E6EDF3; font-size: 1em;">{{ scan.started_at|date:"Y-m-d H:i:s" }}</div>
+                <div style="color: #8B949E; font-size: 0.85em; margin-top: 3px;">
+                    {% if scan.completed_at %}Completed: {{ scan.completed_at|date:"H:i:s" }}{% else %}In Progress{% endif %}
+                </div>
+            </div>
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Overall Risk Score</div>
+                <div style="font-size: 2em; font-weight: bold; color: {% if scan.risk_score >= 7 %}#FF003C{% elif scan.risk_score >= 4 %}#FFD700{% else %}#00FF9C{% endif %};">
+                    {% if scan.risk_score > 0 %}{{ scan.risk_score|floatformat:1 }}/10{% else %}N/A{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px;">
+        <div style="background: #161B22; padding: 20px; border-radius: 12px; border: 1px solid rgba(0, 191, 255, 0.3);">
+            <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Open Ports</div>
+            <div style="color: #00BFFF; font-size: 2em; font-weight: bold;">{{ ports.count }}</div>
+        </div>
+        <div style="background: #161B22; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 0, 60, 0.3);">
+            <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Critical Issues</div>
+            <div style="color: #FF003C; font-size: 2em; font-weight: bold;">{{ severity_counts.critical }}</div>
+        </div>
+        <div style="background: #161B22; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 215, 0, 0.3);">
+            <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">High/Medium</div>
+            <div style="color: #FFD700; font-size: 2em; font-weight: bold;">{{ severity_counts.high|add:severity_counts.medium }}</div>
+        </div>
+        <div style="background: #161B22; padding: 20px; border-radius: 12px; border: 1px solid rgba(0, 255, 156, 0.3);">
+            <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Total Vulnerabilities</div>
+            <div style="color: #00FF9C; font-size: 2em; font-weight: bold;">{{ vulnerabilities.count }}</div>
+        </div>
+    </div>
+
+    <!-- Open Ports Table -->
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2); margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="color: #00FF9C; margin: 0;">Open Ports ({{ ports.count }})</h3>
+            <input type="text" id="port-search" placeholder="Search ports..." style="padding: 10px 15px; background: #0D1117; border: 2px solid rgba(0, 255, 156, 0.3); border-radius: 8px; color: #E6EDF3; width: 300px;">
+        </div>
+        
+        {% if ports %}
+        <table id="ports-table">
+            <thead>
+                <tr>
+                    <th>Port</th>
+                    <th>Service</th>
+                    <th>Version</th>
+                    <th>Protocol</th>
+                    <th>Risk Level</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for port in ports %}
+                <tr class="port-row">
+                    <td><strong style="color: #00BFFF;">{{ port.port_number }}</strong></td>
+                    <td>{{ port.service|default:"Unknown" }}</td>
+                    <td style="color: #8B949E; font-size: 0.9em;">{{ port.version|truncatewords:10|default:"N/A" }}</td>
+                    <td><span class="badge low">{{ port.protocol|upper }}</span></td>
+                    <td>
+                        {% if port.port_number == 21 or port.port_number == 23 or port.port_number == 445 or port.port_number == 3389 or port.port_number == 5900 %}
+                            <span class="badge critical">HIGH RISK</span>
+                        {% elif port.port_number == 22 or port.port_number == 80 or port.port_number == 443 or port.port_number == 3306 or port.port_number == 5432 %}
+                            <span class="badge medium">MEDIUM</span>
+                        {% else %}
+                            <span class="badge low">LOW</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #8B949E;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8B949E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p>No open ports discovered</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Vulnerabilities Panel -->
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2); margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="color: #00FF9C; margin: 0;">Vulnerabilities ({{ vulnerabilities.count }})</h3>
+            <div style="display: flex; gap: 10px;">
+                <select id="severity-filter" style="padding: 10px 15px; background: #0D1117; border: 2px solid rgba(0, 255, 156, 0.3); border-radius: 8px; color: #E6EDF3;">
+                    <option value="all">All Severities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+                <input type="text" id="vuln-search" placeholder="Search vulnerabilities..." style="padding: 10px 15px; background: #0D1117; border: 2px solid rgba(0, 255, 156, 0.3); border-radius: 8px; color: #E6EDF3; width: 300px;">
+            </div>
+        </div>
+        
+        {% if vulnerabilities %}
+        <div id="vulnerabilities-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px;">
+            {% for vuln in vulnerabilities %}
+            <div class="vuln-card" data-severity="{{ vuln.severity }}" style="background: #0D1117; border-radius: 8px; padding: 20px; border-left: 4px solid {% if vuln.severity == 'critical' %}#FF003C{% elif vuln.severity == 'high' %}#FF6A00{% elif vuln.severity == 'medium' %}#FFD700{% else %}#00BFFF{% endif %}; transition: all 0.3s;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                    <h4 style="color: #E6EDF3; margin: 0; flex: 1;">{{ vuln.title }}</h4>
+                    <span class="badge {{ vuln.severity }}" style="margin-left: 10px;">{{ vuln.severity|upper }}</span>
+                </div>
+                
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 10px;">
+                    {% if vuln.port %}Port: <span style="color: #00BFFF;">{{ vuln.port.port_number }}</span> • {% endif %}
+                    {% if vuln.cvss_score %}CVSS: <span style="color: #FFD700;">{{ vuln.cvss_score }}</span>{% endif %}
+                    {% if vuln.cve_id %} • CVE: <span style="color: #FF6A00;">{{ vuln.cve_id }}</span>{% endif %}
+                </div>
+                
+                <div style="color: #E6EDF3; font-size: 0.9em; line-height: 1.6; margin-bottom: 15px;">
+                    {{ vuln.description|truncatewords:30 }}
+                </div>
+                
+                {% if vuln.remediation %}
+                <div style="background: rgba(0, 191, 255, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #00BFFF;">
+                    <div style="color: #00BFFF; font-weight: bold; font-size: 0.85em; margin-bottom: 5px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        Remediation
+                    </div>
+                    <div style="color: #E6EDF3; font-size: 0.85em;">{{ vuln.remediation|truncatewords:20 }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #8B949E;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <p style="color: #00FF9C; font-weight: bold;">No vulnerabilities detected! Target appears secure.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Attack Surface Visualization -->
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2); margin-bottom: 20px;">
+        <h3 style="color: #00FF9C; margin-bottom: 20px;">Attack Surface Visualization</h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <!-- Services Graph -->
+            <div>
+                <h4 style="color: #00BFFF; margin-bottom: 15px;">Open Services</h4>
+                <div style="background: #0D1117; border-radius: 8px; padding: 20px; border: 1px solid rgba(0, 191, 255, 0.2);">
+                    {% if ports %}
+                        {% for port in ports|slice:":10" %}
+                        <div style="margin-bottom: 15px; padding: 10px; background: rgba(0, 191, 255, 0.05); border-radius: 6px; border-left: 3px solid #00BFFF;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="color: #00BFFF; font-weight: bold;">{{ port.service|default:"Unknown" }}</span>
+                                    <span style="color: #8B949E; margin-left: 10px;">:{{ port.port_number }}</span>
+                                </div>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: #8B949E; text-align: center; padding: 20px;">No services detected</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Attack Paths -->
+            <div>
+                <h4 style="color: #FF003C; margin-bottom: 15px;">Possible Attack Paths</h4>
+                <div style="background: #0D1117; border-radius: 8px; padding: 20px; border: 1px solid rgba(255, 0, 60, 0.2);">
+                    {% if vulnerabilities %}
+                        {% for vuln in vulnerabilities|slice:":5" %}
+                        <div style="margin-bottom: 15px; padding: 10px; background: rgba(255, 0, 60, 0.05); border-radius: 6px; border-left: 3px solid {% if vuln.severity == 'critical' %}#FF003C{% elif vuln.severity == 'high' %}#FF6A00{% else %}#FFD700{% endif %};">
+                            <div style="color: #E6EDF3; font-weight: bold; margin-bottom: 5px;">{{ vuln.title|truncatewords:5 }}</div>
+                            <div style="color: #8B949E; font-size: 0.85em;">
+                                {% if vuln.port %}Port {{ vuln.port.port_number }} • {% endif %}
+                                <span class="badge {{ vuln.severity }}" style="font-size: 0.75em;">{{ vuln.severity|upper }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: #00FF9C; text-align: center; padding: 20px;">No attack paths identified</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display: flex; gap: 15px; margin-top: 20px;">
+        <button onclick="window.print()" style="flex: 1; background: linear-gradient(135deg, #00BFFF 0%, #0099CC 100%); color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);">
+            Export Report
+        </button>
+        <a href="{% url 'rescanai:index' %}" style="flex: 1; background: rgba(139, 148, 158, 0.2); color: #8B949E; padding: 15px; border-radius: 8px; text-align: center; text-decoration: none; border: 1px solid rgba(139, 148, 158, 0.3); display: flex; align-items: center; justify-content: center;">
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<script>
+// Port search functionality
+document.getElementById('port-search').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('.port-row');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Vulnerability search functionality
+document.getElementById('vuln-search').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const cards = document.querySelectorAll('.vuln-card');
+    
+    cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Severity filter
+document.getElementById('severity-filter').addEventListener('change', function(e) {
+    const severity = e.target.value;
+    const cards = document.querySelectorAll('.vuln-card');
+    
+    cards.forEach(card => {
+        if (severity === 'all' || card.dataset.severity === severity) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+
+// Hover effects for vulnerability cards
+document.querySelectorAll('.vuln-card').forEach(card => {
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px)';
+        this.style.boxShadow = '0 8px 16px rgba(0, 255, 156, 0.2)';
+    });
+    
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
+    });
+});
+</script>
+{% endblock %}

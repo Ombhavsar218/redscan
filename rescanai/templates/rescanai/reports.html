@@ -1,0 +1,104 @@
+{% extends 'rescanai/base.html' %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div style="max-width: 100%; margin: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="color: #00BFFF; margin: 0;">Scan Reports</h2>
+        <a href="{% url 'rescanai:index' %}" style="color: #8B949E; text-decoration: none;">← Back to Dashboard</a>
+    </div>
+
+    <!-- Statistics -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px;">
+        <div style="background: #161B22; padding: 20px; border-radius: 12px; border: 1px solid rgba(0, 191, 255, 0.3);">
+            <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Total Reports</div>
+            <div style="color: #00BFFF; font-size: 2em; font-weight: bold;">{{ scans.count }}</div>
+        </div>
+        <div style="background: #161B22; padding: 20px; border-radius: 12px; border: 1px solid rgba(0, 191, 255, 0.3);">
+            <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Completed Scans</div>
+            <div style="color: #00BFFF; font-size: 2em; font-weight: bold;">{{ completed_count }}</div>
+        </div>
+        <div style="background: #161B22; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 0, 60, 0.3);">
+            <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Total Vulnerabilities</div>
+            <div style="color: #FF003C; font-size: 2em; font-weight: bold;">{{ total_vulns }}</div>
+        </div>
+    </div>
+
+    <!-- Reports List -->
+    {% if scans %}
+    <div style="background: #161B22; border-radius: 12px; padding: 25px; border: 1px solid rgba(0, 191, 255, 0.2);">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid rgba(0, 191, 255, 0.3);">
+                    <th style="padding: 15px; text-align: left; color: #00BFFF; font-weight: 600;">Report ID</th>
+                    <th style="padding: 15px; text-align: left; color: #00BFFF; font-weight: 600;">Target</th>
+                    <th style="padding: 15px; text-align: left; color: #00BFFF; font-weight: 600;">Scan Type</th>
+                    <th style="padding: 15px; text-align: left; color: #00BFFF; font-weight: 600;">Date</th>
+                    <th style="padding: 15px; text-align: left; color: #00BFFF; font-weight: 600;">Status</th>
+                    <th style="padding: 15px; text-align: left; color: #00BFFF; font-weight: 600;">Vulnerabilities</th>
+                    <th style="padding: 15px; text-align: center; color: #00BFFF; font-weight: 600;">Export</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in scans %}
+                <tr style="border-bottom: 1px solid rgba(139, 148, 158, 0.2); transition: background 0.3s;" onmouseover="this.style.background='rgba(0, 191, 255, 0.05)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 15px; color: #E6EDF3;">#{{ scan.id }}</td>
+                    <td style="padding: 15px; color: #E6EDF3;">{{ scan.target.name }}</td>
+                    <td style="padding: 15px; color: #8B949E;">{{ scan.scan_type|upper }}</td>
+                    <td style="padding: 15px; color: #8B949E;">{{ scan.started_at|date:"Y-m-d H:i" }}</td>
+                    <td style="padding: 15px;">
+                        <span style="padding: 5px 12px; border-radius: 6px; font-size: 0.85em; font-weight: 600; {% if scan.status == 'completed' %}background: rgba(0, 191, 255, 0.2); color: #00BFFF;{% elif scan.status == 'running' %}background: rgba(255, 215, 0, 0.2); color: #FFD700;{% else %}background: rgba(139, 148, 158, 0.2); color: #8B949E;{% endif %}">
+                            {{ scan.status|upper }}
+                        </span>
+                    </td>
+                    <td style="padding: 15px;">
+                        <span style="color: {% if scan.vulnerability_set.count > 0 %}#FF003C{% else %}#00BFFF{% endif %}; font-weight: bold;">
+                            {{ scan.vulnerability_set.count }}
+                        </span>
+                    </td>
+                    <td style="padding: 15px; text-align: center;">
+                        <div style="display: flex; gap: 8px; justify-content: center;">
+                            <a href="{% url 'rescanai:export_report' scan.id 'pdf' %}" style="padding: 8px 12px; background: rgba(255, 0, 60, 0.2); border: 1px solid rgba(255, 0, 60, 0.3); border-radius: 6px; text-decoration: none; color: #FF003C; font-size: 0.85em; font-weight: 600; transition: all 0.3s;" title="Download PDF">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF003C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                PDF
+                            </a>
+                            <a href="{% url 'rescanai:export_report' scan.id 'json' %}" style="padding: 8px 12px; background: rgba(0, 191, 255, 0.2); border: 1px solid rgba(0, 191, 255, 0.3); border-radius: 6px; text-decoration: none; color: #00BFFF; font-size: 0.85em; font-weight: 600; transition: all 0.3s;" title="Export JSON">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                JSON
+                            </a>
+                            <a href="{% url 'rescanai:export_report' scan.id 'csv' %}" style="padding: 8px 12px; background: rgba(255, 215, 0, 0.2); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 6px; text-decoration: none; color: #FFD700; font-size: 0.85em; font-weight: 600; transition: all 0.3s;" title="Export CSV">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                CSV
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="background: #161B22; border-radius: 12px; padding: 60px; text-align: center; border: 1px solid rgba(0, 191, 255, 0.2);">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#8B949E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 20px;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+        </svg>
+        <h3 style="color: #8B949E; margin-bottom: 10px;">No Reports Available</h3>
+        <p style="color: #8B949E;">Run some scans to generate reports.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'rescanai/base.html' %}
+
+{% block title %}Scan Progress{% endblock %}
+
+{% block content %}
+<div style="max-width: 100%; margin: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="color: #00FF9C; margin: 0;">Scan Progress - #<span id="scan-id">{{ scan.id }}</span></h2>
+        <a href="{% url 'rescanai:index' %}" style="color: #8B949E; text-decoration: none;">← Back to Dashboard</a>
+    </div>
+
+    <!-- Status Card -->
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2); margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Target</div>
+                <div style="color: #00BFFF; font-size: 1.2em; font-weight: bold;">{{ scan.target.target_value }}</div>
+            </div>
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Scan Type</div>
+                <div style="color: #E6EDF3; font-size: 1.2em; font-weight: bold;">{{ scan.scan_type|upper }}</div>
+            </div>
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Status</div>
+                <div><span class="badge {{ scan.status }}" id="scan-status">{{ scan.status|upper }}</span></div>
+            </div>
+            <div>
+                <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 5px;">Progress</div>
+                <div style="color: #00FF9C; font-size: 1.5em; font-weight: bold;" id="progress-percent">0%</div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div style="background: #0D1117; border-radius: 8px; height: 30px; overflow: hidden; position: relative; border: 1px solid rgba(0, 255, 156, 0.2);">
+            <div id="progress-bar" style="background: linear-gradient(90deg, #00FF9C 0%, #00BFFF 100%); height: 100%; width: 0%; transition: width 0.3s ease; box-shadow: 0 0 20px rgba(0, 255, 156, 0.5);"></div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #E6EDF3; font-weight: bold; font-size: 0.9em;" id="progress-text">Initializing...</div>
+        </div>
+
+        <!-- Status Message -->
+        <div style="margin-top: 20px; padding: 15px; background: rgba(0, 191, 255, 0.1); border-radius: 8px; border-left: 4px solid #00BFFF;">
+            <div style="color: #00BFFF; font-weight: bold; margin-bottom: 5px;">Current Status</div>
+            <div style="color: #E6EDF3;" id="status-message">Starting scan...</div>
+        </div>
+    </div>
+
+    <!-- Live Logs Section -->
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="color: #00FF9C; margin: 0;">Live Logs</h3>
+            <button onclick="toggleLogs()" id="toggle-logs-btn" style="background: rgba(0, 255, 156, 0.2); color: #00FF9C; border: 2px solid rgba(0, 255, 156, 0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                Show Logs
+            </button>
+        </div>
+
+        <div id="logs-container" style="display: none; background: #0D1117; border-radius: 8px; padding: 20px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.9em; border: 1px solid rgba(0, 255, 156, 0.2);">
+            <div id="logs-content">
+                <div style="color: #8B949E;">Waiting for logs...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="margin-top: 20px; display: flex; gap: 15px;">
+        <a href="{% url 'rescanai:scan_detail' scan.id %}" id="view-results-btn" style="display: none; flex: 1; background: linear-gradient(135deg, #00FF9C 0%, #00CC7A 100%); color: #0D1117; padding: 15px; border-radius: 8px; text-align: center; text-decoration: none; font-weight: bold; box-shadow: 0 0 20px rgba(0, 255, 156, 0.3);">
+            View Results
+        </a>
+        <a href="{% url 'rescanai:index' %}" style="flex: 1; background: rgba(139, 148, 158, 0.2); color: #8B949E; padding: 15px; border-radius: 8px; text-align: center; text-decoration: none; border: 1px solid rgba(139, 148, 158, 0.3);">
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<script>
+let logsVisible = false;
+let scanId = {{ scan.id }};
+let updateInterval;
+
+function toggleLogs() {
+    const logsContainer = document.getElementById('logs-container');
+    const toggleBtn = document.getElementById('toggle-logs-btn');
+    logsVisible = !logsVisible;
+    
+    if (logsVisible) {
+        logsContainer.style.display = 'block';
+        toggleBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;"><polyline points="18 15 12 9 6 15"></polyline></svg> Hide Logs';
+    } else {
+        logsContainer.style.display = 'none';
+        toggleBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;"><polyline points="6 9 12 15 18 9"></polyline></svg> Show Logs';
+    }
+}
+
+function updateProgress() {
+    fetch(`/scan/${scanId}/progress/`)
+        .then(response => response.json())
+        .then(data => {
+            // Update progress bar
+            const progressBar = document.getElementById('progress-bar');
+            const progressPercent = document.getElementById('progress-percent');
+            const progressText = document.getElementById('progress-text');
+            const statusMessage = document.getElementById('status-message');
+            const scanStatus = document.getElementById('scan-status');
+            
+            progressBar.style.width = data.progress + '%';
+            progressPercent.textContent = data.progress + '%';
+            progressText.textContent = data.progress + '% Complete';
+            statusMessage.textContent = data.message;
+            scanStatus.textContent = data.status.toUpperCase();
+            scanStatus.className = 'badge ' + data.status;
+            
+            // Update logs
+            if (data.logs && data.logs.length > 0) {
+                const logsContent = document.getElementById('logs-content');
+                logsContent.innerHTML = '';
+                
+                data.logs.forEach(log => {
+                    const logEntry = document.createElement('div');
+                    logEntry.style.marginBottom = '8px';
+                    logEntry.style.padding = '8px';
+                    logEntry.style.borderLeft = '3px solid ' + getLogColor(log.level);
+                    logEntry.style.background = 'rgba(0, 0, 0, 0.3)';
+                    logEntry.style.borderRadius = '4px';
+                    
+                    logEntry.innerHTML = `
+                        <span style="color: ${getLogColor(log.level)}; font-weight: bold;">[${log.level}]</span>
+                        <span style="color: #8B949E; margin-left: 10px;">${log.timestamp}</span>
+                        <div style="color: #E6EDF3; margin-top: 5px;">${log.message}</div>
+                    `;
+                    
+                    logsContent.appendChild(logEntry);
+                });
+                
+                // Auto-scroll to bottom
+                if (logsVisible) {
+                    logsContent.scrollTop = logsContent.scrollHeight;
+                }
+            }
+            
+            // Show results button if completed
+            if (data.status === 'completed' || data.status === 'failed') {
+                document.getElementById('view-results-btn').style.display = 'block';
+                clearInterval(updateInterval);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching progress:', error);
+        });
+}
+
+function getLogColor(level) {
+    switch(level) {
+        case 'ERROR': return '#FF003C';
+        case 'WARNING': return '#FFD700';
+        case 'INFO': return '#00BFFF';
+        default: return '#8B949E';
+    }
+}
+
+// Start updating progress
+updateProgress();
+updateInterval = setInterval(updateProgress, 2000); // Update every 2 seconds
+</script>
+{% endblock %}

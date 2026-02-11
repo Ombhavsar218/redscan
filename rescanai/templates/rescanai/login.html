@@ -1,0 +1,108 @@
+{% extends 'rescanai/base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 80px auto; padding: 0 20px;">
+    <div style="background: #161B22; border-radius: 12px; padding: 40px; border: 1px solid rgba(0, 255, 156, 0.2); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #00FF9C; margin-bottom: 10px;">Welcome Back</h2>
+            <p style="color: #8B949E;">Login to access RedScan AI</p>
+        </div>
+
+        {% if error %}
+        <div style="background: rgba(255, 0, 60, 0.1); border: 1px solid rgba(255, 0, 60, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF003C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span style="color: #FF003C;">{{ error }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'rescanai:login' %}">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #00FF9C; font-weight: bold; margin-bottom: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Email
+                </label>
+                <input type="email" name="email" required autofocus style="width: 100%; padding: 12px; background: #0D1117; border: 2px solid rgba(0, 255, 156, 0.3); border-radius: 8px; color: #E6EDF3; font-size: 1em; transition: all 0.3s;">
+            </div>
+
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; color: #00FF9C; font-weight: bold; margin-bottom: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Password
+                </label>
+                <div style="position: relative;">
+                    <input type="password" name="password" id="password" required style="width: 100%; padding: 12px; padding-right: 45px; background: #0D1117; border: 2px solid rgba(0, 255, 156, 0.3); border-radius: 8px; color: #E6EDF3; font-size: 1em; transition: all 0.3s;">
+                    <button type="button" onclick="togglePassword('password')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 5px;">
+                        <svg id="password-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B949E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" style="width: 100%; background: linear-gradient(135deg, #00FF9C 0%, #00CC7A 100%); color: #0D1117; padding: 15px; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 20px rgba(0, 255, 156, 0.3); margin-bottom: 20px;">
+                Login
+            </button>
+
+            <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(139, 148, 158, 0.2);">
+                <p style="color: #8B949E; margin-bottom: 10px;">Don't have an account?</p>
+                <a href="{% url 'rescanai:register' %}" style="color: #00BFFF; text-decoration: none; font-weight: bold;">
+                    Create Account
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 5px;">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="{% url 'rescanai:index' %}" style="color: #8B949E; text-decoration: none;">← Back to Home</a>
+    </div>
+</div>
+
+<style>
+input:focus {
+    outline: none;
+    border-color: #00FF9C;
+    box-shadow: 0 0 15px rgba(0, 255, 156, 0.3);
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0, 255, 156, 0.5);
+}
+</style>
+
+<script>
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const eyeIcon = document.getElementById(fieldId + '-eye');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+    } else {
+        field.type = 'password';
+        eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+    }
+}
+</script>
+{% endblock %}

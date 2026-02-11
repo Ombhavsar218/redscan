@@ -1,0 +1,131 @@
+{% extends 'rescanai/base.html' %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div style="display: flex; gap: 15px;">
+        <a href="{% url 'rescanai:vulnerability_database' %}" style="background: rgba(0, 191, 255, 0.1); color: #00BFFF; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; border: 2px solid rgba(0, 191, 255, 0.3);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Vulnerability Database
+        </a>
+        <a href="{% url 'rescanai:reports' %}" style="background: rgba(255, 0, 60, 0.1); color: #FF003C; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; border: 2px solid rgba(255, 0, 60, 0.3);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF003C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Reports
+        </a>
+    </div>
+    <a href="{% url 'rescanai:new_scan' %}" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);">
+        <span style="font-size: 1.2em;">+</span> New Scan
+    </a>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_targets }}</div>
+        <div class="stat-label">Total Targets</div>
+    </div>
+    <div class="stat-card" style="border-left-color: #3498db;">
+        <div class="stat-number" style="color: #3498db;">{{ total_scans }}</div>
+        <div class="stat-label">Total Scans</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-number">{{ active_vulns }}</div>
+        <div class="stat-label">Active Vulnerabilities</div>
+    </div>
+    <div class="stat-card critical">
+        <div class="stat-number">{{ critical_vulns }}</div>
+        <div class="stat-label">Critical Issues</div>
+    </div>
+</div>
+
+<div style="margin-top: 30px;">
+    <!-- Recent Scans Section -->
+    <div>
+        <h2 style="color: #e74c3c; margin-bottom: 20px;">Recent Scans</h2>
+        
+        {% if recent_scans %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Target</th>
+                    <th>Type</th>
+                    <th>Risk Score</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in recent_scans %}
+                <tr>
+                    <td>#{{ scan.id }}</td>
+                    <td>{{ scan.target.name }}</td>
+                    <td>{{ scan.scan_type }}</td>
+                    <td>
+                        <span style="font-weight: bold; color: {% if scan.risk_score >= 7 %}#e74c3c{% elif scan.risk_score >= 4 %}#f39c12{% else %}#27ae60{% endif %};">
+                            {% if scan.risk_score > 0 %}{{ scan.risk_score|floatformat:1 }}/10{% else %}N/A{% endif %}
+                        </span>
+                    </td>
+                    <td><span class="badge {{ scan.status }}">{{ scan.status|upper }}</span></td>
+                    <td>{{ scan.started_at|date:"Y-m-d H:i" }}</td>
+                    <td style="white-space: nowrap;">
+                        <a href="{% url 'rescanai:scan_detail' scan.id %}" style="display: inline-block; margin-right: 10px; padding: 5px 8px; background: rgba(99, 102, 241, 0.2); border-radius: 5px; text-decoration: none; border: 1px solid rgba(99, 102, 241, 0.3);" title="View Details">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </a>
+                        <a href="#" onclick="deleteScan({{ scan.id }}); return false;" style="display: inline-block; padding: 5px 8px; background: rgba(239, 68, 68, 0.2); border-radius: 5px; text-decoration: none; border: 1px solid rgba(239, 68, 68, 0.3);" title="Delete Scan">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="background: rgba(255,255,255,0.05); border-radius: 10px; padding: 40px; text-align: center;">
+            <p style="color: #95a5a6; margin-bottom: 20px;">No scans yet. Create a target and start scanning!</p>
+            <a href="{% url 'rescanai:new_scan' %}" style="background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">Create Target</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function deleteScan(scanId) {
+    if (!confirm('Are you sure you want to delete Scan #' + scanId + '? This action cannot be undone.')) {
+        return;
+    }
+    
+    fetch('/scan/' + scanId + '/delete/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Scan deleted successfully!');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + (data.error || 'Failed to delete scan'));
+        }
+    })
+    .catch(error => {
+        alert('❌ Error deleting scan: ' + error);
+    });
+}
+</script>
+{% endblock %}
