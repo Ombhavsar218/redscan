@@ -1,36 +1,20 @@
 {% extends 'rescanai/base.html' %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-    <div style="display: flex; gap: 15px;">
-        <a href="{% url 'rescanai:vulnerability_database' %}" style="background: rgba(0, 191, 255, 0.1); color: #00BFFF; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; border: 2px solid rgba(0, 191, 255, 0.3);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            Vulnerability Database
-        </a>
-        <a href="{% url 'rescanai:reports' %}" style="background: rgba(255, 0, 60, 0.1); color: #FF003C; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; border: 2px solid rgba(255, 0, 60, 0.3);">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF003C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-            </svg>
-            Reports
-        </a>
-    </div>
-    <a href="{% url 'rescanai:new_scan' %}" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);">
+<div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 30px;">
+    <a href="{% url 'rescanai:new_scan' %}" style="background: linear-gradient(135deg, #00FF9C 0%, #00CC7A 100%); color: #0D1117; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0, 255, 156, 0.3);">
         <span style="font-size: 1.2em;">+</span> New Scan
     </a>
 </div>
 
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-number">{{ total_targets }}</div>
-        <div class="stat-label">Total Targets</div>
-    </div>
-    <div class="stat-card" style="border-left-color: #3498db;">
-        <div class="stat-number" style="color: #3498db;">{{ total_scans }}</div>
+        <div class="stat-number">{{ total_scans }}</div>
         <div class="stat-label">Total Scans</div>
+    </div>
+    <div class="stat-card" style="border-color: rgba(0, 191, 255, 0.3);">
+        <div class="stat-number" style="color: #00BFFF;">{{ total_targets }}</div>
+        <div class="stat-label">Targets Scanned</div>
     </div>
     <div class="stat-card warning">
         <div class="stat-number">{{ active_vulns }}</div>

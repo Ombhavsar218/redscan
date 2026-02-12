@@ -5,9 +5,12 @@ app_name = 'rescanai'
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('dashboard/', views.dashboard, name='dashboard'),
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+    path('settings/', views.settings_view, name='settings'),
+    path('settings/delete-account/', views.delete_account_view, name='delete_account'),
     path('scan/new/', views.new_scan, name='new_scan'),
     path('scan/start/', views.start_scan, name='start_scan'),
     path('scan/<int:scan_id>/', views.scan_detail, name='scan_detail'),

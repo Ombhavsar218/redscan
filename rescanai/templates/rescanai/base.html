@@ -12,32 +12,154 @@
             background: #0D1117;
             color: #E6EDF3;
             min-height: 100vh;
+            display: flex;
         }
         
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background: #161B22;
+            border-right: 1px solid rgba(0, 255, 156, 0.2);
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(0, 255, 156, 0.2);
+        }
+        
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .sidebar-logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00FF9C 0%, #00CC7A 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            font-weight: 700;
+            color: #0D1117;
+        }
+        
+        .sidebar-logo-text {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #00FF9C;
+        }
+        
+        .sidebar-subtitle {
+            color: #8B949E;
+            font-size: 0.75em;
+            padding-left: 52px;
+        }
+        
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+        
+        .nav-section {
+            margin-bottom: 25px;
+        }
+        
+        .nav-section-title {
+            color: #8B949E;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0 20px 10px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #E6EDF3;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-item:hover {
+            background: rgba(0, 255, 156, 0.1);
+            color: #00FF9C;
+            border-left-color: #00FF9C;
+        }
+        
+        .nav-item.active {
+            background: rgba(0, 255, 156, 0.15);
+            color: #00FF9C;
+            border-left-color: #00FF9C;
+            font-weight: 600;
+        }
+        
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        
+        .nav-text {
+            font-size: 0.9em;
+        }
+        
+        /* Main Content Area */
+        .main-wrapper {
+            flex: 1;
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            padding: 20px;
+            width: 100%;
+        }
         
         header {
             background: #161B22;
             backdrop-filter: blur(10px);
-            padding: 20px 0;
-            border-bottom: 2px solid #00FF9C;
+            padding: 28px 0;
+            border-bottom: 1px solid rgba(0, 255, 156, 0.2);
             margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 255, 156, 0.2);
         }
         
-        h1 { 
-            color: #00FF9C; 
-            font-size: 2em; 
+        header .container {
+            padding: 0 20px;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 1.8em;
             font-weight: 700;
-            letter-spacing: -0.5px;
-            text-shadow: 0 0 20px rgba(0, 255, 156, 0.5);
+            color: #00FF9C;
         }
         
-        .subtitle { 
-            color: #8B949E; 
-            font-size: 0.9em; 
-            margin-top: 5px;
-            font-weight: 400;
+        .page-subtitle {
+            color: #8B949E;
+            font-size: 0.85em;
+            margin-top: 2px;
         }
         
         .stats-grid {
@@ -166,37 +288,202 @@
             font-weight: 600;
             letter-spacing: -0.5px;
         }
+        
+        .user-profile {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00FF9C 0%, #00CC7A 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid rgba(0, 255, 156, 0.3);
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #0D1117;
+            font-size: 1.1em;
+        }
+        
+        .profile-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0, 255, 156, 0.5);
+        }
+        
+        .profile-dropdown {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            background: #161B22;
+            border: 1px solid rgba(0, 255, 156, 0.3);
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            display: none;
+            z-index: 1000;
+        }
+        
+        .profile-dropdown.show {
+            display: block;
+        }
+        
+        .dropdown-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(0, 255, 156, 0.2);
+        }
+        
+        .dropdown-username {
+            color: #00FF9C;
+            font-weight: 600;
+            font-size: 1em;
+        }
+        
+        .dropdown-item {
+            padding: 12px 15px;
+            color: #E6EDF3;
+            text-decoration: none;
+            display: block;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(0, 255, 156, 0.1);
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-item:hover {
+            background: rgba(0, 255, 156, 0.1);
+            color: #00FF9C;
+        }
+        
+        .dropdown-item.logout {
+            color: #FF003C;
+        }
+        
+        .dropdown-item.logout:hover {
+            background: rgba(255, 0, 60, 0.1);
+        }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h1>RedScan AI</h1>
-                    <p class="subtitle">Intelligent Reconnaissance & Vulnerability Scanner</p>
-                </div>
-                <div>
-                    {% if user.is_authenticated %}
-                        <span style="color: #8B949E; margin-right: 15px;">Welcome, <strong style="color: #00FF9C;">{{ user.username }}</strong></span>
-                        <a href="{% url 'rescanai:logout' %}" style="background: rgba(255, 0, 60, 0.2); color: #FF003C; padding: 10px 20px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(255, 0, 60, 0.3); transition: all 0.3s;">
-                            Logout
-                        </a>
-                    {% else %}
-                        <a href="{% url 'rescanai:login' %}" style="background: rgba(0, 255, 156, 0.2); color: #00FF9C; padding: 10px 20px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(0, 255, 156, 0.3); margin-right: 10px; transition: all 0.3s;">
-                            Login
-                        </a>
-                        <a href="{% url 'rescanai:register' %}" style="background: linear-gradient(135deg, #00FF9C 0%, #00CC7A 100%); color: #0D1117; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; transition: all 0.3s;">
-                            Register
-                        </a>
-                    {% endif %}
+    {% if user.is_authenticated %}
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">RS</div>
+                <div class="sidebar-logo-text">RedScan AI</div>
+            </div>
+            <div class="sidebar-subtitle">Security Scanner</div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main</div>
+                <a href="{% url 'rescanai:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'index' %}active{% endif %}">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="{% url 'rescanai:new_scan' %}" class="nav-item {% if request.resolver_match.url_name == 'new_scan' %}active{% endif %}">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <span class="nav-text">New Scan</span>
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-section-title">Analysis</div>
+                <a href="{% url 'rescanai:vulnerability_database' %}" class="nav-item {% if request.resolver_match.url_name == 'vulnerability_database' %}active{% endif %}">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span class="nav-text">Vulnerabilities</span>
+                </a>
+                <a href="{% url 'rescanai:reports' %}" class="nav-item {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span class="nav-text">Reports</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header>
+            <div class="container">
+                <div class="header-content">
+                    <div>
+                        <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                        <p class="page-subtitle">{% block page_subtitle %}Overview of your security scans{% endblock %}</p>
+                    </div>
+                    <div>
+                        {% if user.is_authenticated %}
+                            <div class="user-profile">
+                                <div class="profile-icon" onclick="toggleDropdown()">
+                                    {{ user.username|slice:":1"|upper }}
+                                </div>
+                                <div class="profile-dropdown" id="profileDropdown">
+                                    <div class="dropdown-header">
+                                        <div class="dropdown-username">{{ user.username }}</div>
+                                    </div>
+                                    <a href="{% url 'rescanai:settings' %}" class="dropdown-item">Settings</a>
+                                    <a href="{% url 'rescanai:logout' %}" class="dropdown-item logout">Logout</a>
+                                </div>
+                            </div>
+                        {% else %}
+                            <a href="{% url 'rescanai:login' %}" style="background: rgba(0, 255, 156, 0.2); color: #00FF9C; padding: 10px 20px; border-radius: 8px; text-decoration: none; border: 1px solid rgba(0, 255, 156, 0.3); margin-right: 10px; transition: all 0.3s;">
+                                Login
+                            </a>
+                            <a href="{% url 'rescanai:register' %}" style="background: linear-gradient(135deg, #00FF9C 0%, #00CC7A 100%); color: #0D1117; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; transition: all 0.3s;">
+                                Register
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
+        </header>
+        
+        <div class="container">
+            {% block content %}{% endblock %}
         </div>
-    </header>
-    
-    <div class="container">
-        {% block content %}{% endblock %}
     </div>
+    
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.profile-icon')) {
+                const dropdown = document.getElementById('profileDropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        }
+    </script>
 </body>
 </html>

@@ -533,3 +533,77 @@ OPEN PORTS ({ports.count()})
         return response
     
     return JsonResponse({'error': 'Invalid format'}, status=400)
+
+@login_required
+def settings_view(request):
+    """Settings page"""
+    from django.contrib import messages
+    from django.contrib.auth import update_session_auth_hash
+    
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+        
+        if form_type == 'profile':
+            # Update profile information
+            username = request.POST.get('username')
+            email = request.POST.get('email')
+            first_name = request.POST.get('first_name', '')
+            last_name = request.POST.get('last_name', '')
+            
+            # Check if username is taken by another user
+            if User.objects.filter(username=username).exclude(id=request.user.id).exists():
+                messages.error(request, 'Username already taken')
+            # Check if email is taken by another user
+            elif User.objects.filter(email=email).exclude(id=request.user.id).exists():
+                messages.error(request, 'Email already registered')
+            else:
+                request.user.username = username
+                request.user.email = email
+                request.user.first_name = first_name
+                request.user.last_name = last_name
+                request.user.save()
+                messages.success(request, 'Profile updated successfully')
+        
+        elif form_type == 'password':
+            # Update password
+            current_password = request.POST.get('current_password')
+            new_password = request.POST.get('new_password')
+            confirm_password = request.POST.get('confirm_password')
+            
+            if not request.user.check_password(current_password):
+                messages.error(request, 'Current password is incorrect')
+            elif new_password != confirm_password:
+                messages.error(request, 'New passwords do not match')
+            elif len(new_password) < 8:
+                messages.error(request, 'Password must be at least 8 characters')
+            else:
+                request.user.set_password(new_password)
+                request.user.save()
+                update_session_auth_hash(request, request.user)
+                messages.success(request, 'Password updated successfully')
+        
+        elif form_type == 'notifications':
+            # Save notification preferences (you can extend this with a UserProfile model)
+            messages.success(request, 'Notification preferences saved')
+        
+        return redirect('rescanai:settings')
+    
+    return render(request, 'rescanai/settings.html')
+
+@login_required
+def delete_account_view(request):
+    """Delete user account"""
+    if request.method == 'POST':
+        user = request.user
+        auth_logout(request)
+        user.delete()
+        return redirect('rescanai:login')
+    
+    return redirect('rescanai:settings')
+
+def dashboard(request):
+    """Main dashboard view"""
+    if not request.user.is_authenticated:
+        return redirect('rescanai:login')
+    
+    return index(request)
