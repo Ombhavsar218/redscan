@@ -23,5 +23,8 @@ Thumbs.db
 # Environment variables
 .env
 
-#Learning guide
-LEARNING_GUIDE.md
+# Ignore all markdown files
+*.md
+
+# Except README
+!README.md

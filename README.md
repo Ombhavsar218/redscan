@@ -166,17 +166,6 @@ Open your browser and go to:
 
 ---
 
-## 📸 Screenshots
-
-_Add screenshots of your dashboard and scan results here._
-
-Example:
-- Dashboard overview
-- Scan results page
-- Risk visualization
-
----
-
 ## 🎯 Learning Objectives
 
 This project helps you understand:
@@ -188,27 +177,6 @@ This project helps you understand:
 
 ---
 
-## 🚧 Future Improvements
-
-- Machine learning-based risk prediction
-- Cloud infrastructure scanning
-- Real-time alerts
-- Multi-target enterprise scanning
-- Advanced exploit automation
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Submit a pull request
-
----
-
 ## 📜 License
 
 This project is licensed under the MIT License.
@@ -217,7 +185,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍💻 Author
 
-**Your Name**
+**Om Bhavsar**
 
 Cybersecurity enthusiast & developer
 
