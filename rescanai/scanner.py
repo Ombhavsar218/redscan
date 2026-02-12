@@ -1,34 +1,79 @@
 """
-Core scanning engine for RedScan AI
-Handles network reconnaissance and vulnerability detection
+RedScan AI - Core Scanner Engine
+Phase 1: Network Reconnaissance Module
+Handles port scanning, service detection, banner grabbing, and target discovery
 """
 import socket
 import subprocess
 import re
+import dns.resolver
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import ipaddress
+import requests
+from datetime import datetime
+
+# Try to import nmap, fallback to socket-based scanning
+try:
+    import nmap
+    NMAP_AVAILABLE = True
+except ImportError:
+    NMAP_AVAILABLE = False
+    print("[!] python-nmap not installed. Using fallback socket scanning.")
+
 
 class NetworkScanner:
-    """Handles network reconnaissance tasks"""
+    """
+    Advanced Network Scanner with multiple scanning techniques
+    Supports both Nmap and socket-based scanning
+    """
     
     def __init__(self, target: str):
         self.target = target
+        self.target_ip = None
         self.results = {
             'open_ports': [],
             'services': {},
+            'banners': {},
             'os_detection': None,
+            'scan_time': None,
         }
+        
+        # Initialize Nmap scanner if available
+        if NMAP_AVAILABLE:
+            self.nm = nmap.PortScanner()
+        else:
+            self.nm = None
     
-    def scan_port(self, port: int, timeout: float = 1.0) -> Tuple[int, bool, str]:
+    def resolve_target(self) -> str:
         """
-        Scan a single port using socket connection
+        Resolve hostname to IP address
+        Returns IP address or original target if already an IP
+        """
+        try:
+            # Check if already an IP
+            ipaddress.ip_address(self.target)
+            self.target_ip = self.target
+            return self.target
+        except ValueError:
+            # It's a hostname, resolve it
+            try:
+                self.target_ip = socket.gethostbyname(self.target)
+                print(f"[+] Resolved {self.target} to {self.target_ip}")
+                return self.target_ip
+            except socket.gaierror:
+                print(f"[-] Could not resolve {self.target}")
+                return None
+    
+    def scan_port_socket(self, port: int, timeout: float = 1.0) -> Tuple[int, bool, str]:
+        """
+        Scan a single port using raw socket connection
         Returns: (port_number, is_open, service_name)
         """
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(timeout)
-            result = sock.connect_ex((self.target, port))
+            result = sock.connect_ex((self.target_ip or self.target, port))
             sock.close()
             
             if result == 0:
@@ -41,53 +86,273 @@ class NetworkScanner:
         except Exception as e:
             return (port, False, '')
     
-    def scan_ports(self, port_range: range = range(1, 1025), max_workers: int = 100):
+    def scan_ports_socket(self, port_range: range, max_workers: int = 100) -> List[int]:
         """
-        Scan multiple ports concurrently
-        Default: scans common ports 1-1024
+        Scan multiple ports concurrently using sockets
+        Fallback method when Nmap is not available
         """
-        print(f"[*] Scanning {self.target} for open ports...")
+        print(f"[*] Socket scanning {self.target} ports {port_range.start}-{port_range.stop-1}...")
+        start_time = datetime.now()
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self.scan_port, port): port for port in port_range}
+            futures = {executor.submit(self.scan_port_socket, port): port for port in port_range}
             
             for future in as_completed(futures):
                 port, is_open, service = future.result()
                 if is_open:
                     self.results['open_ports'].append(port)
                     self.results['services'][port] = service
-                    print(f"[+] Port {port} is open - {service}")
+                    print(f"[+] Port {port}/tcp open - {service}")
         
-        return self.results['open_ports']
+        self.results['scan_time'] = (datetime.now() - start_time).total_seconds()
+        return sorted(self.results['open_ports'])
+    
+    def scan_ports_nmap(self, port_range: range, scan_type: str = 'default') -> List[int]:
+        """
+        Scan ports using Nmap for more accurate results
+        Scan types: 'default', 'stealth', 'aggressive', 'version'
+        """
+        if not self.nm:
+            print("[!] Nmap not available, falling back to socket scan")
+            return self.scan_ports_socket(port_range)
+        
+        print(f"[*] Nmap scanning {self.target} ports {port_range.start}-{port_range.stop-1}...")
+        start_time = datetime.now()
+        
+        # Build port range string
+        port_str = f"{port_range.start}-{port_range.stop-1}"
+        
+        # Select scan arguments based on type
+        scan_args = {
+            'default': '-sS -sV',  # SYN scan with version detection
+            'stealth': '-sS',       # Stealth SYN scan
+            'aggressive': '-A',     # Aggressive scan (OS, version, scripts)
+            'version': '-sV',       # Version detection
+        }
+        
+        args = scan_args.get(scan_type, '-sS -sV')
+        
+        try:
+            self.nm.scan(self.target, port_str, arguments=args)
+            
+            # Parse results
+            for host in self.nm.all_hosts():
+                for proto in self.nm[host].all_protocols():
+                    ports = self.nm[host][proto].keys()
+                    for port in ports:
+                        port_info = self.nm[host][proto][port]
+                        if port_info['state'] == 'open':
+                            self.results['open_ports'].append(port)
+                            service = port_info.get('name', 'unknown')
+                            version = port_info.get('version', '')
+                            product = port_info.get('product', '')
+                            
+                            service_str = f"{product} {version}".strip() if product else service
+                            self.results['services'][port] = service_str
+                            
+                            print(f"[+] Port {port}/tcp open - {service_str}")
+                
+                # OS Detection
+                if 'osmatch' in self.nm[host]:
+                    os_matches = self.nm[host]['osmatch']
+                    if os_matches:
+                        self.results['os_detection'] = os_matches[0]['name']
+                        print(f"[+] OS Detection: {self.results['os_detection']}")
+        
+        except Exception as e:
+            print(f"[-] Nmap scan error: {e}")
+            print("[!] Falling back to socket scan")
+            return self.scan_ports_socket(port_range)
+        
+        self.results['scan_time'] = (datetime.now() - start_time).total_seconds()
+        return sorted(self.results['open_ports'])
+    
+    def scan_ports(self, port_range: range = range(1, 1025), use_nmap: bool = True) -> List[int]:
+        """
+        Main port scanning method
+        Automatically chooses best scanning method
+        """
+        # Resolve target first
+        if not self.resolve_target():
+            return []
+        
+        # Use Nmap if available and requested
+        if use_nmap and NMAP_AVAILABLE:
+            return self.scan_ports_nmap(port_range)
+        else:
+            return self.scan_ports_socket(port_range)
     
     def banner_grab(self, port: int, timeout: float = 2.0) -> str:
         """
-        Attempt to grab service banner for version detection
+        Grab service banner for version detection
+        Supports HTTP, FTP, SMTP, SSH, and generic TCP services
         """
+        banner = ""
+        target = self.target_ip or self.target
+        
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(timeout)
-            sock.connect((self.target, port))
+            sock.connect((target, port))
             
-            # Send HTTP request for web servers
-            if port in [80, 443, 8080, 8443]:
-                sock.send(b"HEAD / HTTP/1.0\r\n\r\n")
+            # HTTP/HTTPS banner grabbing
+            if port in [80, 443, 8080, 8443, 8000, 3000, 5000]:
+                request = b"HEAD / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n"
+                sock.send(request)
+                banner = sock.recv(2048).decode('utf-8', errors='ignore')
             
-            banner = sock.recv(1024).decode('utf-8', errors='ignore').strip()
+            # FTP banner
+            elif port == 21:
+                banner = sock.recv(1024).decode('utf-8', errors='ignore')
+            
+            # SSH banner
+            elif port == 22:
+                banner = sock.recv(1024).decode('utf-8', errors='ignore')
+            
+            # SMTP banner
+            elif port in [25, 587]:
+                banner = sock.recv(1024).decode('utf-8', errors='ignore')
+            
+            # Generic banner grab
+            else:
+                try:
+                    sock.send(b"\r\n")
+                    banner = sock.recv(1024).decode('utf-8', errors='ignore')
+                except:
+                    pass
+            
             sock.close()
-            return banner
-        except:
+            
+            if banner:
+                self.results['banners'][port] = banner.strip()
+                print(f"[+] Banner from port {port}: {banner[:100]}...")
+            
+            return banner.strip()
+        
+        except Exception as e:
             return ""
     
-    def resolve_hostname(self) -> str:
-        """Resolve domain to IP address"""
+    def grab_all_banners(self) -> Dict[int, str]:
+        """Grab banners from all open ports"""
+        print("[*] Grabbing service banners...")
+        for port in self.results['open_ports']:
+            self.banner_grab(port)
+        return self.results['banners']
+    
+    def detect_web_server(self, port: int) -> Dict:
+        """
+        Detect web server type and version
+        """
+        target = self.target_ip or self.target
+        protocols = ['https' if port in [443, 8443] else 'http']
+        
+        for protocol in protocols:
+            try:
+                url = f"{protocol}://{target}:{port}"
+                response = requests.get(url, timeout=3, verify=False, allow_redirects=False)
+                
+                return {
+                    'server': response.headers.get('Server', 'Unknown'),
+                    'powered_by': response.headers.get('X-Powered-By', 'Unknown'),
+                    'status_code': response.status_code,
+                    'title': self._extract_title(response.text),
+                }
+            except:
+                continue
+        
+        return {}
+    
+    @staticmethod
+    def _extract_title(html: str) -> str:
+        """Extract title from HTML"""
+        match = re.search(r'<title>(.*?)</title>', html, re.IGNORECASE)
+        return match.group(1) if match else 'No title'
+
+
+class TargetDiscovery:
+    """
+    Target Discovery Module
+    Handles DNS enumeration, subdomain discovery, and network mapping
+    """
+    
+    def __init__(self, domain: str):
+        self.domain = domain
+        self.discovered_hosts = []
+    
+    def dns_lookup(self, record_type: str = 'A') -> List[str]:
+        """
+        Perform DNS lookup for various record types
+        Types: A, AAAA, MX, NS, TXT, CNAME
+        """
+        results = []
         try:
-            return socket.gethostbyname(self.target)
+            answers = dns.resolver.resolve(self.domain, record_type)
+            for rdata in answers:
+                results.append(str(rdata))
+                print(f"[+] {record_type} record: {rdata}")
+        except Exception as e:
+            print(f"[-] DNS lookup failed for {record_type}: {e}")
+        
+        return results
+    
+    def reverse_dns_lookup(self, ip: str) -> Optional[str]:
+        """Perform reverse DNS lookup"""
+        try:
+            hostname = socket.gethostbyaddr(ip)[0]
+            print(f"[+] Reverse DNS: {ip} -> {hostname}")
+            return hostname
         except:
-            return self.target
+            return None
+    
+    def subdomain_enumeration(self, wordlist: List[str] = None) -> List[str]:
+        """
+        Enumerate subdomains using DNS queries
+        """
+        if wordlist is None:
+            # Common subdomain wordlist
+            wordlist = [
+                'www', 'mail', 'ftp', 'localhost', 'webmail', 'smtp', 'pop', 'ns1', 'ns2',
+                'admin', 'portal', 'api', 'dev', 'staging', 'test', 'demo', 'blog',
+                'shop', 'forum', 'support', 'vpn', 'remote', 'cloud', 'cdn', 'app'
+            ]
+        
+        print(f"[*] Enumerating subdomains for {self.domain}...")
+        found_subdomains = []
+        
+        for subdomain in wordlist:
+            full_domain = f"{subdomain}.{self.domain}"
+            try:
+                answers = dns.resolver.resolve(full_domain, 'A')
+                for rdata in answers:
+                    found_subdomains.append({
+                        'subdomain': full_domain,
+                        'ip': str(rdata)
+                    })
+                    print(f"[+] Found: {full_domain} -> {rdata}")
+            except:
+                pass
+        
+        self.discovered_hosts = found_subdomains
+        return found_subdomains
+    
+    def get_mx_records(self) -> List[str]:
+        """Get mail server records"""
+        return self.dns_lookup('MX')
+    
+    def get_ns_records(self) -> List[str]:
+        """Get nameserver records"""
+        return self.dns_lookup('NS')
+    
+    def get_txt_records(self) -> List[str]:
+        """Get TXT records (SPF, DKIM, etc.)"""
+        return self.dns_lookup('TXT')
+
 
 class VulnerabilityScanner:
-    """Detects common vulnerabilities"""
+    """
+    Vulnerability Detection Engine
+    Identifies common security issues and misconfigurations
+    """
     
     def __init__(self, target: str, open_ports: List[int]):
         self.target = target
@@ -96,38 +361,67 @@ class VulnerabilityScanner:
     
     def check_common_vulnerabilities(self) -> List[Dict]:
         """
-        Check for common misconfigurations and vulnerabilities
+        Check for common vulnerabilities and misconfigurations
         """
-        print(f"[*] Checking for vulnerabilities on {self.target}...")
+        print(f"[*] Analyzing vulnerabilities on {self.target}...")
         
-        # Check for dangerous open ports
-        dangerous_ports = {
-            21: ('FTP', 'Unencrypted file transfer', 'medium'),
-            23: ('Telnet', 'Unencrypted remote access', 'high'),
-            445: ('SMB', 'Potential for EternalBlue exploit', 'critical'),
-            3389: ('RDP', 'Remote Desktop exposed', 'high'),
-            5900: ('VNC', 'Remote desktop exposed', 'high'),
+        # Dangerous/risky open ports
+        risky_ports = {
+            21: ('FTP', 'Unencrypted file transfer protocol', 'medium', 
+                 'Use SFTP or FTPS instead'),
+            23: ('Telnet', 'Unencrypted remote access', 'high',
+                 'Use SSH instead of Telnet'),
+            25: ('SMTP', 'Mail server exposed', 'low',
+                 'Ensure proper authentication and relay controls'),
+            445: ('SMB', 'File sharing protocol - potential for exploits', 'critical',
+                  'Restrict SMB access and apply latest patches'),
+            1433: ('MSSQL', 'Database server exposed', 'high',
+                   'Restrict database access to trusted IPs only'),
+            3306: ('MySQL', 'Database server exposed', 'high',
+                   'Restrict database access to trusted IPs only'),
+            3389: ('RDP', 'Remote Desktop exposed to internet', 'critical',
+                   'Use VPN or restrict RDP access by IP'),
+            5432: ('PostgreSQL', 'Database server exposed', 'high',
+                   'Restrict database access to trusted IPs only'),
+            5900: ('VNC', 'Remote desktop protocol exposed', 'high',
+                   'Use strong passwords and consider VPN access'),
+            6379: ('Redis', 'In-memory database exposed', 'critical',
+                   'Enable authentication and bind to localhost'),
+            27017: ('MongoDB', 'Database exposed without authentication', 'critical',
+                    'Enable authentication and restrict network access'),
         }
         
         for port in self.open_ports:
-            if port in dangerous_ports:
-                service, desc, severity = dangerous_ports[port]
+            if port in risky_ports:
+                service, desc, severity, remediation = risky_ports[port]
                 self.vulnerabilities.append({
                     'port': port,
                     'title': f'{service} Service Exposed',
                     'description': desc,
                     'severity': severity,
-                    'remediation': f'Consider disabling {service} or restricting access via firewall'
+                    'remediation': remediation
                 })
         
-        # Check for default credentials (simulated)
+        # Check for common web ports
+        web_ports = [80, 443, 8080, 8443, 8000, 3000, 5000]
+        for port in self.open_ports:
+            if port in web_ports:
+                self.vulnerabilities.append({
+                    'port': port,
+                    'title': f'Web Server on Port {port}',
+                    'description': 'Web service detected - ensure proper security headers and HTTPS',
+                    'severity': 'info',
+                    'remediation': 'Implement HTTPS, security headers, and regular security audits'
+                })
+        
+        # SSH detection
         if 22 in self.open_ports:
             self.vulnerabilities.append({
                 'port': 22,
                 'title': 'SSH Service Detected',
-                'description': 'Ensure strong authentication is configured',
+                'description': 'Secure Shell service is running',
                 'severity': 'info',
-                'remediation': 'Use key-based authentication and disable password login'
+                'remediation': 'Use key-based authentication, disable root login, change default port'
             })
         
         return self.vulnerabilities
@@ -149,33 +443,69 @@ class VulnerabilityScanner:
         
         total_score = sum(severity_weights.get(v['severity'], 0) for v in self.vulnerabilities)
         # Normalize to 0-10 scale
-        return min(10.0, total_score / len(self.vulnerabilities))
+        max_possible = len(self.vulnerabilities) * 10
+        return min(10.0, (total_score / max_possible) * 10)
+
 
 class ReconEngine:
-    """Advanced reconnaissance features"""
+    """
+    Advanced Reconnaissance Engine
+    Combines all recon modules for comprehensive target analysis
+    """
     
-    @staticmethod
-    def whois_lookup(domain: str) -> Dict:
-        """Placeholder for WHOIS information gathering"""
-        return {
-            'domain': domain,
-            'registrar': 'N/A',
-            'creation_date': 'N/A',
-            'note': 'Implement with python-whois library'
+    def __init__(self, target: str):
+        self.target = target
+        self.scanner = NetworkScanner(target)
+        self.results = {}
+    
+    def full_recon(self, port_range: range = range(1, 1025)) -> Dict:
+        """
+        Perform full reconnaissance on target
+        """
+        print(f"\n{'='*60}")
+        print(f"RedScan AI - Full Reconnaissance")
+        print(f"Target: {self.target}")
+        print(f"{'='*60}\n")
+        
+        # Phase 1: Target Resolution
+        print("[Phase 1] Target Resolution")
+        ip = self.scanner.resolve_target()
+        if not ip:
+            return {'error': 'Could not resolve target'}
+        
+        # Phase 2: Port Scanning
+        print(f"\n[Phase 2] Port Scanning")
+        open_ports = self.scanner.scan_ports(port_range)
+        
+        # Phase 3: Banner Grabbing
+        print(f"\n[Phase 3] Service Detection")
+        self.scanner.grab_all_banners()
+        
+        # Phase 4: Vulnerability Assessment
+        print(f"\n[Phase 4] Vulnerability Assessment")
+        vuln_scanner = VulnerabilityScanner(self.target, open_ports)
+        vulnerabilities = vuln_scanner.check_common_vulnerabilities()
+        risk_score = vuln_scanner.calculate_risk_score()
+        
+        # Compile results
+        self.results = {
+            'target': self.target,
+            'ip': ip,
+            'open_ports': open_ports,
+            'services': self.scanner.results['services'],
+            'banners': self.scanner.results['banners'],
+            'os_detection': self.scanner.results['os_detection'],
+            'vulnerabilities': vulnerabilities,
+            'risk_score': risk_score,
+            'scan_time': self.scanner.results['scan_time'],
         }
-    
-    @staticmethod
-    def subdomain_enum(domain: str) -> List[str]:
-        """Placeholder for subdomain enumeration"""
-        common_subdomains = ['www', 'mail', 'ftp', 'admin', 'api', 'dev']
-        found = []
         
-        for sub in common_subdomains:
-            try:
-                full_domain = f"{sub}.{domain}"
-                socket.gethostbyname(full_domain)
-                found.append(full_domain)
-            except:
-                pass
+        print(f"\n{'='*60}")
+        print(f"Scan Complete!")
+        print(f"Open Ports: {len(open_ports)}")
+        print(f"Vulnerabilities: {len(vulnerabilities)}")
+        print(f"Risk Score: {risk_score:.1f}/10")
+        print(f"Scan Time: {self.scanner.results['scan_time']:.2f}s")
+        print(f"{'='*60}\n")
         
-        return found
+        return self.results
