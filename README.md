@@ -94,7 +94,7 @@ redscan/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/redscan-ai.git
+git clone https://github.com/Ombhavsar218/redscan-ai.git
 cd redscan-ai
 ```
 
@@ -189,7 +189,7 @@ This project is licensed under the MIT License.
 
 Cybersecurity enthusiast & developer
 
-GitHub: https://github.com/yourusername  
+GitHub: https://github.com/Ombhavsar218 
 LinkedIn: (optional)
 
 ---

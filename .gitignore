@@ -28,3 +28,8 @@ Thumbs.db
 
 # Except README
 !README.md
+
+# Ignore specific documentation files
+MENTOR_NOTES.md
+PROJECT_STATUS.md
+QUICKSTART.md
