@@ -87,3 +87,69 @@ class ScanLog(models.Model):
     
     class Meta:
         ordering = ['-timestamp']
+
+
+class WebReconData(models.Model):
+    """Stores web reconnaissance results"""
+    scan = models.OneToOneField(Scan, on_delete=models.CASCADE, related_name='web_recon')
+    
+    # Technology Detection
+    cms = models.JSONField(default=list, blank=True)  # ['WordPress', 'Joomla']
+    frameworks = models.JSONField(default=list, blank=True)
+    javascript_libraries = models.JSONField(default=list, blank=True)
+    web_servers = models.JSONField(default=list, blank=True)
+    programming_languages = models.JSONField(default=list, blank=True)
+    analytics = models.JSONField(default=list, blank=True)
+    
+    # Security Headers
+    security_headers = models.JSONField(default=dict, blank=True)
+    
+    # Discovered URLs and Directories
+    discovered_urls = models.JSONField(default=list, blank=True)
+    directories = models.JSONField(default=list, blank=True)
+    
+    # Forms and Emails
+    forms = models.JSONField(default=list, blank=True)
+    emails = models.JSONField(default=list, blank=True)
+    
+    # Standard Files
+    robots_txt_content = models.TextField(blank=True)
+    sitemap_urls = models.JSONField(default=list, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Web Recon for Scan {self.scan.id}"
+
+class LocalServerData(models.Model):
+    """Stores localhost/local server scan results with Django-specific analysis"""
+    scan = models.OneToOneField(Scan, on_delete=models.CASCADE, related_name='local_server')
+    
+    # Target Information
+    target = models.CharField(max_length=200, default='localhost')
+    
+    # Port and Service Discovery
+    open_ports = models.JSONField(default=list, blank=True)  # [{'port': 8000, 'service': 'Django'}]
+    services_detected = models.JSONField(default=list, blank=True)
+    
+    # Django-Specific Information
+    django_detected = models.BooleanField(default=False)
+    django_version = models.CharField(max_length=50, blank=True)
+    admin_panel_accessible = models.BooleanField(default=False)
+    admin_url = models.CharField(max_length=200, blank=True)
+    debug_mode_enabled = models.BooleanField(default=False)
+    static_files_accessible = models.BooleanField(default=False)
+    accessible_urls = models.JSONField(default=list, blank=True)
+    
+    # Security Analysis
+    security_headers = models.JSONField(default=dict, blank=True)
+    missing_security_headers = models.JSONField(default=list, blank=True)
+    configuration_issues = models.JSONField(default=list, blank=True)
+    
+    # Recommendations
+    security_recommendations = models.JSONField(default=list, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Local Server Scan for {self.target} (Scan {self.scan.id})"

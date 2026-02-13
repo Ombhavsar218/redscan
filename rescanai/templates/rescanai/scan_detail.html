@@ -168,6 +168,382 @@
         {% endif %}
     </div>
 
+    <!-- Web Reconnaissance Results (if available) -->
+    {% if web_recon %}
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2); margin-bottom: 20px;">
+        <h3 style="color: #00FF9C; margin-bottom: 20px;">🌐 Web Reconnaissance</h3>
+        
+        <!-- Technology Detection -->
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">Detected Technologies</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                
+                {% if web_recon.cms %}
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #FF6A00;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">CMS</div>
+                    {% for cms in web_recon.cms %}
+                    <div style="color: #FF6A00; font-weight: bold;">{{ cms }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if web_recon.web_servers %}
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #00BFFF;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Web Server</div>
+                    {% for server in web_recon.web_servers %}
+                    <div style="color: #00BFFF; font-weight: bold;">{{ server }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if web_recon.programming_languages %}
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #00FF9C;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Language</div>
+                    {% for lang in web_recon.programming_languages %}
+                    <div style="color: #00FF9C; font-weight: bold;">{{ lang }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if web_recon.javascript_libraries %}
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #FFD700;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">JS Libraries</div>
+                    {% for lib in web_recon.javascript_libraries %}
+                    <div style="color: #FFD700;">{{ lib }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if web_recon.analytics %}
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #8B949E;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Analytics</div>
+                    {% for analytics in web_recon.analytics %}
+                    <div style="color: #E6EDF3;">{{ analytics }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Security Headers -->
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">Security Headers</h4>
+            <div style="background: #0D1117; border-radius: 8px; padding: 20px;">
+                <table style="width: 100%; border: none;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 10px; color: #00FF9C;">Header</th>
+                            <th style="text-align: left; padding: 10px; color: #00FF9C;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for header, value in web_recon.security_headers.items %}
+                        <tr>
+                            <td style="padding: 10px; color: #E6EDF3;">{{ header }}</td>
+                            <td style="padding: 10px;">
+                                {% if value == "Missing" %}
+                                <span class="badge high">❌ Missing</span>
+                                {% else %}
+                                <span class="badge low">✅ Present</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Discovered Directories -->
+        {% if web_recon.directories %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">Discovered Directories ({{ web_recon.directories|length }})</h4>
+            <div style="background: #0D1117; border-radius: 8px; padding: 20px; max-height: 400px; overflow-y: auto;">
+                {% for dir in web_recon.directories|slice:":20" %}
+                <div style="padding: 10px; margin-bottom: 8px; background: rgba(0, 191, 255, 0.05); border-radius: 6px; border-left: 3px solid {% if dir.status == 200 %}#00FF9C{% elif dir.status == 403 %}#FFD700{% else %}#00BFFF{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #E6EDF3; font-family: monospace;">{{ dir.url }}</span>
+                        <span class="badge {% if dir.status == 200 %}completed{% elif dir.status == 403 %}medium{% else %}info{% endif %}">
+                            {{ dir.status }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Forms Found -->
+        {% if web_recon.forms %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">Forms Detected ({{ web_recon.forms|length }})</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                {% for form in web_recon.forms %}
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border: 1px solid rgba(0, 191, 255, 0.2);">
+                    <div style="color: #00BFFF; font-weight: bold; margin-bottom: 10px;">
+                        {{ form.method }} {{ form.action|default:"/" }}
+                    </div>
+                    <div style="color: #8B949E; font-size: 0.85em;">
+                        Inputs: {{ form.inputs|length }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Emails Found -->
+        {% if web_recon.emails %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">Email Addresses ({{ web_recon.emails|length }})</h4>
+            <div style="background: #0D1117; border-radius: 8px; padding: 20px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    {% for email in web_recon.emails %}
+                    <span style="background: rgba(0, 191, 255, 0.1); color: #00BFFF; padding: 8px 15px; border-radius: 20px; font-family: monospace; font-size: 0.9em;">
+                        {{ email }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- robots.txt -->
+        {% if web_recon.robots_txt_content %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">robots.txt</h4>
+            <div style="background: #0D1117; border-radius: 8px; padding: 20px; border: 1px solid rgba(0, 191, 255, 0.2);">
+                <pre style="color: #E6EDF3; font-family: monospace; font-size: 0.85em; overflow-x: auto; margin: 0;">{{ web_recon.robots_txt_content|truncatewords:100 }}</pre>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Sitemap URLs -->
+        {% if web_recon.sitemap_urls %}
+        <div>
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">Sitemap URLs ({{ web_recon.sitemap_urls|length }})</h4>
+            <div style="background: #0D1117; border-radius: 8px; padding: 20px; max-height: 300px; overflow-y: auto;">
+                {% for url in web_recon.sitemap_urls|slice:":15" %}
+                <div style="padding: 8px; margin-bottom: 5px; color: #00BFFF; font-family: monospace; font-size: 0.85em;">
+                    {{ url }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Local Server Analysis Results (if available) -->
+    {% if local_server %}
+    <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(255, 165, 0, 0.2); margin-bottom: 20px;">
+        <h3 style="color: #FFA500; margin-bottom: 20px;">🖥️ Comprehensive Localhost Analysis</h3>
+        
+        <!-- Environment Overview -->
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">Environment Overview</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #00FF9C;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Target</div>
+                    <div style="color: #00FF9C; font-weight: bold;">{{ local_server.target }}</div>
+                </div>
+                
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid {% if local_server.django_detected %}#00FF9C{% else %}#8B949E{% endif %};">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Django Detected</div>
+                    <div style="color: {% if local_server.django_detected %}#00FF9C{% else %}#8B949E{% endif %}; font-weight: bold;">
+                        {% if local_server.django_detected %}✅ Yes{% else %}❌ No{% endif %}
+                    </div>
+                </div>
+                
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #00BFFF;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Services Found</div>
+                    <div style="color: #00BFFF; font-weight: bold;">{{ local_server.open_ports|length }}</div>
+                </div>
+                
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid #FFD700;">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Config Issues</div>
+                    <div style="color: #FFD700; font-weight: bold;">{{ local_server.configuration_issues|length }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Development Servers -->
+        {% if local_server.services_detected %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">🌐 Development Servers ({{ local_server.services_detected|length }})</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px;">
+                {% for server in local_server.services_detected %}
+                <div style="background: #0D1117; border-radius: 8px; padding: 20px; border-left: 4px solid {% if server.debug_mode %}#FF003C{% elif server.framework == 'React' %}#61DAFB{% elif server.framework == 'Vue.js' %}#4FC08D{% elif server.framework == 'Angular' %}#DD0031{% elif server.framework == 'Django' %}#092E20{% else %}#00BFFF{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                        <h5 style="color: #E6EDF3; margin: 0;">{{ server.name|default:"Development Server" }}</h5>
+                        <span style="background: rgba(0, 191, 255, 0.2); color: #00BFFF; padding: 4px 8px; border-radius: 12px; font-size: 0.75em;">
+                            Port {{ server.port }}
+                        </span>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px;">
+                        <span style="color: #8B949E; font-size: 0.85em;">Framework: </span>
+                        <span style="color: #E6EDF3; font-weight: bold;">{{ server.framework|default:"Unknown" }}</span>
+                    </div>
+                    
+                    {% if server.debug_mode %}
+                    <div style="background: rgba(255, 0, 60, 0.1); padding: 10px; border-radius: 6px; border-left: 3px solid #FF003C; margin-bottom: 10px;">
+                        <div style="color: #FF003C; font-weight: bold; font-size: 0.85em;">🚨 DEBUG MODE ENABLED</div>
+                        <div style="color: #E6EDF3; font-size: 0.8em;">High security risk - sensitive information exposed</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if server.hot_reload %}
+                    <div style="background: rgba(255, 215, 0, 0.1); padding: 8px; border-radius: 6px; margin-bottom: 10px;">
+                        <div style="color: #FFD700; font-size: 0.85em;">🔄 Hot Reload Active</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if server.source_maps %}
+                    <div style="background: rgba(255, 165, 0, 0.1); padding: 8px; border-radius: 6px; margin-bottom: 10px;">
+                        <div style="color: #FFA500; font-size: 0.85em;">🗺️ Source Maps Exposed</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if server.exposed_endpoints %}
+                    <div style="margin-top: 10px;">
+                        <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Accessible Endpoints:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                            {% for endpoint in server.exposed_endpoints %}
+                            <span style="background: rgba(0, 255, 156, 0.1); color: #00FF9C; padding: 3px 8px; border-radius: 10px; font-family: monospace; font-size: 0.75em;">
+                                {{ endpoint }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Testing Environments -->
+        {% if local_server.open_ports %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">🧪 Testing Environments</h4>
+            <div style="background: #0D1117; border-radius: 8px; padding: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    {% for port_info in local_server.open_ports %}
+                    <div style="background: rgba(0, 191, 255, 0.05); padding: 15px; border-radius: 6px; border-left: 3px solid {% if port_info.port == 3306 or port_info.port == 5432 %}#FF6A00{% elif port_info.port == 80 or port_info.port == 8080 %}#00FF9C{% else %}#00BFFF{% endif %};">
+                        <div style="color: #E6EDF3; font-weight: bold; font-size: 1.1em;">
+                            {% if port_info.port == 80 %}🌐 XAMPP/WAMP Apache
+                            {% elif port_info.port == 3306 %}🗄️ MySQL Database
+                            {% elif port_info.port == 5432 %}🐘 PostgreSQL
+                            {% elif port_info.port == 6379 %}📦 Redis Cache
+                            {% elif port_info.port == 8080 %}⚙️ Jenkins/Tomcat
+                            {% elif port_info.port == 27017 %}🍃 MongoDB
+                            {% else %}🔧 Service{% endif %}
+                        </div>
+                        <div style="color: #8B949E; font-size: 0.85em; margin-top: 5px;">Port {{ port_info.port }}</div>
+                        {% if port_info.service %}
+                        <div style="color: #8B949E; font-size: 0.85em;">{{ port_info.service }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Django-Specific Analysis -->
+        {% if local_server.django_detected %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">🐍 Django Security Analysis</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid {% if local_server.admin_panel_accessible %}#FFD700{% else %}#00FF9C{% endif %};">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Admin Panel</div>
+                    <div style="color: {% if local_server.admin_panel_accessible %}#FFD700{% else %}#00FF9C{% endif %}; font-weight: bold;">
+                        {% if local_server.admin_panel_accessible %}⚠️ Accessible{% else %}✅ Protected{% endif %}
+                    </div>
+                    {% if local_server.admin_url %}
+                    <div style="color: #8B949E; font-size: 0.75em; margin-top: 3px;">{{ local_server.admin_url }}</div>
+                    {% endif %}
+                </div>
+                
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid {% if local_server.debug_mode_enabled %}#FF003C{% else %}#00FF9C{% endif %};">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Debug Mode</div>
+                    <div style="color: {% if local_server.debug_mode_enabled %}#FF003C{% else %}#00FF9C{% endif %}; font-weight: bold;">
+                        {% if local_server.debug_mode_enabled %}🚨 ENABLED{% else %}✅ Disabled{% endif %}
+                    </div>
+                </div>
+                
+                <div style="background: #0D1117; padding: 15px; border-radius: 8px; border-left: 3px solid {% if local_server.static_files_accessible %}#00BFFF{% else %}#8B949E{% endif %};">
+                    <div style="color: #8B949E; font-size: 0.85em; margin-bottom: 5px;">Static Files</div>
+                    <div style="color: {% if local_server.static_files_accessible %}#00BFFF{% else %}#8B949E{% endif %}; font-weight: bold;">
+                        {% if local_server.static_files_accessible %}📁 Accessible{% else %}❌ Not Found{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Accessible URLs/Endpoints -->
+        {% if local_server.accessible_urls %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #00BFFF; margin-bottom: 15px;">🔗 Accessible Endpoints ({{ local_server.accessible_urls|length }})</h4>
+            <div style="background: #0D1117; border-radius: 8px; padding: 20px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    {% for url in local_server.accessible_urls %}
+                    <span style="background: rgba(0, 255, 156, 0.1); color: #00FF9C; padding: 8px 15px; border-radius: 20px; font-family: monospace; font-size: 0.9em;">
+                        {{ url.path|default:url }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Configuration Issues -->
+        {% if local_server.configuration_issues %}
+        <div style="margin-bottom: 30px;">
+            <h4 style="color: #FF003C; margin-bottom: 15px;">⚠️ Configuration Issues ({{ local_server.configuration_issues|length }})</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 15px;">
+                {% for issue in local_server.configuration_issues %}
+                <div style="background: #0D1117; border-radius: 8px; padding: 20px; border-left: 4px solid {% if issue.severity == 'critical' %}#FF003C{% elif issue.severity == 'high' %}#FF6A00{% elif issue.severity == 'medium' %}#FFD700{% else %}#00BFFF{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <h5 style="color: #E6EDF3; margin: 0;">{{ issue.path|default:issue.setting|default:"Configuration Issue" }}</h5>
+                        <span class="badge {{ issue.severity|default:'medium' }}" style="font-size: 0.75em;">{{ issue.severity|default:'MEDIUM'|upper }}</span>
+                    </div>
+                    <div style="color: #8B949E; font-size: 0.9em; margin-bottom: 10px;">
+                        {{ issue.content_preview|default:issue.issue|default:"Configuration security issue detected" }}
+                    </div>
+                    {% if issue.size %}
+                    <div style="color: #8B949E; font-size: 0.8em;">Size: {{ issue.size }} bytes</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Security Recommendations -->
+        {% if local_server.security_recommendations %}
+        <div>
+            <h4 style="color: #00FF9C; margin-bottom: 15px;">💡 Security Recommendations ({{ local_server.security_recommendations|length }})</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px;">
+                {% for rec in local_server.security_recommendations %}
+                <div style="background: rgba(0, 255, 156, 0.05); border-radius: 8px; padding: 20px; border-left: 4px solid {% if rec.priority == 'Critical' %}#FF003C{% elif rec.priority == 'High' %}#FF6A00{% elif rec.priority == 'Medium' %}#FFD700{% else %}#00BFFF{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <h5 style="color: #00FF9C; margin: 0;">{{ rec.action|default:rec.category }}</h5>
+                        <span class="badge {% if rec.priority == 'Critical' %}critical{% elif rec.priority == 'High' %}high{% elif rec.priority == 'Medium' %}medium{% else %}low{% endif %}" style="font-size: 0.75em;">{{ rec.priority|default:'MEDIUM'|upper }}</span>
+                    </div>
+                    <div style="color: #E6EDF3; font-size: 0.9em; line-height: 1.5;">{{ rec.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <!-- Attack Surface Visualization -->
     <div style="background: #161B22; border-radius: 12px; padding: 30px; border: 1px solid rgba(0, 255, 156, 0.2); margin-bottom: 20px;">
         <h3 style="color: #00FF9C; margin-bottom: 20px;">Attack Surface Visualization</h3>

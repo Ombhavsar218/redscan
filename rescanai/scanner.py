@@ -1,7 +1,9 @@
 """
 RedScan AI - Core Scanner Engine
 Phase 1: Network Reconnaissance Module
-Handles port scanning, service detection, banner grabbing, and target discovery
+Phase 2: Website Reconnaissance Module  
+Phase 3: Local Server Testing Module
+Handles port scanning, service detection, banner grabbing, target discovery, web recon, and localhost testing
 """
 import socket
 import subprocess
@@ -20,6 +22,10 @@ try:
 except ImportError:
     NMAP_AVAILABLE = False
     print("[!] python-nmap not installed. Using fallback socket scanning.")
+
+# Import local modules
+from .web_recon import WebsiteRecon, WebVulnerabilityScanner
+from .local_server_scanner import LocalServerScanner, DjangoSecurityAnalyzer
 
 
 class NetworkScanner:
@@ -447,16 +453,443 @@ class VulnerabilityScanner:
         return min(10.0, (total_score / max_possible) * 10)
 
 
+class LocalReconEngine:
+    """
+    Local Server Reconnaissance Engine
+    Comprehensive localhost testing covering all scenarios:
+    - Web Development (React, Vue, Angular, Django, Flask)
+    - Testing Environments (XAMPP, WAMP, Docker)
+    - API Testing (REST, GraphQL)
+    - Container Testing
+    - Internal Network Testing
+    """
+    
+    def __init__(self, target: str = 'localhost', progress_callback=None):
+        self.target = target
+        self.progress_callback = progress_callback
+        self.comprehensive_scanner = ComprehensiveLocalhostScanner(target, progress_callback)
+        self.django_analyzer = DjangoSecurityAnalyzer()
+        self.results = {}
+    
+    def adaptive_local_scan(self, scan_type: str = 'comprehensive') -> Dict:
+        """
+        Adaptive scanning for all localhost scenarios with 1% increments
+        Scan types: 'comprehensive', 'web_dev', 'testing_env', 'containers', 'apis'
+        """
+        print(f"\n{'='*60}")
+        print(f"RedScan AI - Comprehensive Localhost Reconnaissance")
+        print(f"Target: {self.target}")
+        print(f"Scan Type: {scan_type}")
+        print(f"{'='*60}\n")
+        
+        if scan_type == 'comprehensive':
+            return self.comprehensive_localhost_scan()
+        elif scan_type == 'web_dev':
+            return self.web_development_scan()
+        elif scan_type == 'testing_env':
+            return self.testing_environment_scan()
+        elif scan_type == 'containers':
+            return self.container_scan()
+        elif scan_type == 'apis':
+            return self.api_scan()
+        else:
+            return self.comprehensive_localhost_scan()  # Default
+    
+    def comprehensive_localhost_scan(self) -> Dict:
+        """
+        Comprehensive localhost scanning covering all scenarios
+        """
+        # Run the comprehensive scan
+        results = self.comprehensive_scanner.run_comprehensive_scan()
+        
+        # Add Django-specific analysis if Django is detected
+        django_detected = any(
+            server.get('framework') == 'Django' 
+            for server in results.get('development_servers', [])
+        )
+        
+        if django_detected:
+            if self.progress_callback:
+                self.progress_callback(98, "Adding Django-specific analysis...")
+            
+            django_file_issues = self.django_analyzer.analyze_settings_file()
+            if django_file_issues:
+                for issue in django_file_issues:
+                    results['vulnerabilities'].append({
+                        'type': f'Django Configuration: {issue["issue"]}',
+                        'severity': issue['severity'],
+                        'description': f"Security issue in {issue['file']}: {issue['issue']}",
+                        'category': 'Django Security'
+                    })
+        
+        if self.progress_callback:
+            self.progress_callback(100, "Comprehensive localhost scan completed!")
+        
+        self.results = results
+        return results
+    
+    def web_development_scan(self) -> Dict:
+        """
+        Focused scan for web development servers
+        """
+        results = {
+            'target': self.target,
+            'scan_type': 'Web Development',
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'development_servers': [],
+            'vulnerabilities': [],
+            'recommendations': []
+        }
+        
+        # Web development specific scanning with detailed progress
+        web_dev_ports = [3000, 3001, 4200, 5000, 5173, 8000, 8080, 9000]
+        
+        for i, port in enumerate(web_dev_ports):
+            progress = int((i + 1) / len(web_dev_ports) * 90)  # 90% for port scanning
+            if self.progress_callback:
+                self.progress_callback(progress, f"Scanning web development port {port}...")
+            
+            if self.comprehensive_scanner.check_port(port):
+                server_info = self.comprehensive_scanner.analyze_development_server({
+                    'port': port,
+                    'name': f'Development Server {port}',
+                    'endpoints': ['/', '/api/', '/static/']
+                })
+                if server_info:
+                    results['development_servers'].append(server_info)
+        
+        # Generate web development specific recommendations
+        if self.progress_callback:
+            self.progress_callback(95, "Generating web development recommendations...")
+        
+        for server in results['development_servers']:
+            if server.get('debug_mode'):
+                results['vulnerabilities'].append({
+                    'type': 'Development Debug Mode',
+                    'severity': 'High',
+                    'description': f'{server["name"]} running in debug mode'
+                })
+        
+        if self.progress_callback:
+            self.progress_callback(100, "Web development scan completed!")
+        
+        return results
+    
+    def testing_environment_scan(self) -> Dict:
+        """
+        Focused scan for testing environments (XAMPP, WAMP, etc.)
+        """
+        results = {
+            'target': self.target,
+            'scan_type': 'Testing Environment',
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'testing_environments': [],
+            'vulnerabilities': [],
+            'recommendations': []
+        }
+        
+        # Testing environment specific scanning
+        testing_ports = [80, 443, 3306, 5432, 6379, 8080, 27017]
+        
+        for i, port in enumerate(testing_ports):
+            progress = int((i + 1) / len(testing_ports) * 80)
+            if self.progress_callback:
+                self.progress_callback(progress, f"Scanning testing environment port {port}...")
+            
+            if self.comprehensive_scanner.check_port(port):
+                # Analyze testing environment
+                env_info = self.analyze_testing_port(port)
+                if env_info:
+                    results['testing_environments'].append(env_info)
+        
+        # Check for common testing vulnerabilities
+        if self.progress_callback:
+            self.progress_callback(90, "Checking testing environment vulnerabilities...")
+        
+        # Add testing-specific vulnerability checks
+        for env in results['testing_environments']:
+            if 'admin' in env.get('name', '').lower():
+                results['vulnerabilities'].append({
+                    'type': 'Admin Interface Exposed',
+                    'severity': 'High',
+                    'description': f'Admin interface accessible: {env["name"]}'
+                })
+        
+        if self.progress_callback:
+            self.progress_callback(100, "Testing environment scan completed!")
+        
+        return results
+    
+    def analyze_testing_port(self, port):
+        """Analyze a specific testing environment port"""
+        port_services = {
+            80: 'XAMPP/WAMP Apache',
+            443: 'XAMPP/WAMP Apache SSL',
+            3306: 'MySQL Database',
+            5432: 'PostgreSQL Database',
+            6379: 'Redis Cache',
+            8080: 'Jenkins/Tomcat',
+            27017: 'MongoDB Database'
+        }
+        
+        return {
+            'port': port,
+            'name': port_services.get(port, f'Service on port {port}'),
+            'accessible': True,
+            'type': 'database' if port in [3306, 5432, 6379, 27017] else 'web'
+        }
+    
+    def container_scan(self) -> Dict:
+        """
+        Focused scan for container environments
+        """
+        results = {
+            'target': self.target,
+            'scan_type': 'Container Environment',
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'containers': [],
+            'vulnerabilities': [],
+            'recommendations': []
+        }
+        
+        container_ports = [2375, 2376, 9000, 8080]
+        
+        for i, port in enumerate(container_ports):
+            progress = int((i + 1) / len(container_ports) * 70)
+            if self.progress_callback:
+                self.progress_callback(progress, f"Scanning container port {port}...")
+            
+            if self.comprehensive_scanner.check_port(port):
+                container_info = self.analyze_container_port(port)
+                results['containers'].append(container_info)
+        
+        # Container security analysis
+        if self.progress_callback:
+            self.progress_callback(80, "Analyzing container security...")
+        
+        for container in results['containers']:
+            if container['port'] == 2375:
+                results['vulnerabilities'].append({
+                    'type': 'Insecure Docker API',
+                    'severity': 'Critical',
+                    'description': 'Docker API exposed without authentication'
+                })
+        
+        if self.progress_callback:
+            self.progress_callback(100, "Container scan completed!")
+        
+        return results
+    
+    def analyze_container_port(self, port):
+        """Analyze container-specific port"""
+        container_services = {
+            2375: 'Docker API (Insecure)',
+            2376: 'Docker API (Secure)',
+            9000: 'Portainer',
+            8080: 'Container Web Interface'
+        }
+        
+        return {
+            'port': port,
+            'name': container_services.get(port, f'Container service {port}'),
+            'risk_level': 'Critical' if port == 2375 else 'Medium'
+        }
+    
+    def api_scan(self) -> Dict:
+        """
+        Focused scan for API endpoints
+        """
+        results = {
+            'target': self.target,
+            'scan_type': 'API Testing',
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'apis': [],
+            'vulnerabilities': [],
+            'recommendations': []
+        }
+        
+        api_ports = [3000, 5000, 8000, 8080, 9000]
+        
+        for i, port in enumerate(api_ports):
+            progress = int((i + 1) / len(api_ports) * 60)
+            if self.progress_callback:
+                self.progress_callback(progress, f"Scanning API endpoints on port {port}...")
+            
+            if self.comprehensive_scanner.check_port(port):
+                api_info = self.analyze_api_port(port)
+                if api_info:
+                    results['apis'].append(api_info)
+        
+        # API security analysis
+        if self.progress_callback:
+            self.progress_callback(70, "Analyzing API security...")
+        
+        for api in results['apis']:
+            if '/docs/' in api.get('endpoints', []):
+                results['vulnerabilities'].append({
+                    'type': 'API Documentation Exposed',
+                    'severity': 'Medium',
+                    'description': f'API documentation accessible on port {api["port"]}'
+                })
+        
+        if self.progress_callback:
+            self.progress_callback(100, "API scan completed!")
+        
+        return results
+    
+    def analyze_api_port(self, port):
+        """Analyze API endpoints on a specific port"""
+        base_url = f"http://{self.target}:{port}"
+        api_paths = ['/api/', '/rest/', '/graphql/', '/docs/', '/swagger/']
+        
+        accessible_endpoints = []
+        for path in api_paths:
+            if self.comprehensive_scanner.test_endpoint(urljoin(base_url, path)):
+                accessible_endpoints.append(path)
+        
+        if accessible_endpoints:
+            return {
+                'port': port,
+                'base_url': base_url,
+                'endpoints': accessible_endpoints
+            }
+        return None
+
+
 class ReconEngine:
     """
     Advanced Reconnaissance Engine
     Combines all recon modules for comprehensive target analysis
+    Now includes local server testing capabilities
     """
     
     def __init__(self, target: str):
         self.target = target
         self.scanner = NetworkScanner(target)
+        self.local_engine = LocalReconEngine(target) if target in ['localhost', '127.0.0.1'] else None
         self.results = {}
+    
+    def adaptive_scan(self, scan_type: str = 'network', progress_callback=None) -> Dict:
+        """
+        Adaptive scanning based on target and scan type
+        Scan types: 'network', 'web', 'api', 'localhost'
+        Features 1% increment progress tracking
+        """
+        if scan_type == 'localhost' or self.target in ['localhost', '127.0.0.1']:
+            # Use local server scanning
+            local_engine = LocalReconEngine(self.target, progress_callback)
+            return local_engine.adaptive_local_scan('localhost')
+        
+        elif scan_type == 'network':
+            return self.network_scan_with_progress(progress_callback)
+        
+        elif scan_type == 'web':
+            return self.web_scan_with_progress(progress_callback)
+        
+        elif scan_type == 'api':
+            return self.api_scan_with_progress(progress_callback)
+        
+        else:
+            return self.full_recon()
+    
+    def network_scan_with_progress(self, progress_callback=None) -> Dict:
+        """Network scanning with 1% increments"""
+        total_steps = 100
+        current_step = 0
+        
+        def update_progress(increment=1, status="Scanning..."):
+            nonlocal current_step
+            current_step += increment
+            if current_step > total_steps:
+                current_step = total_steps
+            if progress_callback:
+                progress_callback(current_step, status)
+        
+        # Phase 1: Target Resolution (5%)
+        update_progress(5, "Resolving target...")
+        ip = self.scanner.resolve_target()
+        if not ip:
+            return {'error': 'Could not resolve target'}
+        
+        # Phase 2: Port Scanning (60%)
+        update_progress(5, "Starting port scan...")
+        port_range = range(1, 1025)
+        ports_per_step = len(port_range) // 50  # 50 steps for port scanning
+        
+        open_ports = []
+        for i, port in enumerate(port_range):
+            if i % ports_per_step == 0:
+                update_progress(1, f"Scanning port {port}...")
+            
+            # Perform actual port scan
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.5)
+                result = sock.connect_ex((ip, port))
+                if result == 0:
+                    open_ports.append(port)
+                sock.close()
+            except:
+                pass
+        
+        # Phase 3: Service Detection (20%)
+        update_progress(5, "Detecting services...")
+        services = {}
+        for i, port in enumerate(open_ports):
+            try:
+                service = socket.getservbyport(port)
+                services[port] = service
+            except:
+                services[port] = 'unknown'
+            
+            if len(open_ports) > 0:
+                progress_increment = 15 // len(open_ports)
+                update_progress(progress_increment, f"Analyzing service on port {port}")
+        
+        # Phase 4: Vulnerability Assessment (10%)
+        update_progress(5, "Assessing vulnerabilities...")
+        vuln_scanner = VulnerabilityScanner(self.target, open_ports)
+        vulnerabilities = vuln_scanner.check_common_vulnerabilities()
+        risk_score = vuln_scanner.calculate_risk_score()
+        update_progress(5, "Vulnerability assessment complete")
+        
+        # Compile results
+        results = {
+            'target': self.target,
+            'ip': ip,
+            'scan_type': 'Network',
+            'open_ports': open_ports,
+            'services': services,
+            'vulnerabilities': vulnerabilities,
+            'risk_score': risk_score,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        return results
+    
+    def web_scan_with_progress(self, progress_callback=None) -> Dict:
+        """Web scanning with 1% increments"""
+        # Initialize web reconnaissance
+        web_recon = WebsiteRecon(self.target, progress_callback)
+        return web_recon.comprehensive_scan()
+    
+    def api_scan_with_progress(self, progress_callback=None) -> Dict:
+        """API scanning with 1% increments"""
+        # Placeholder for API scanning - can be expanded
+        total_steps = 100
+        
+        for i in range(total_steps):
+            if progress_callback:
+                progress_callback(i + 1, f"API scanning step {i + 1}/100")
+        
+        return {
+            'target': self.target,
+            'scan_type': 'API',
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'api_endpoints': [],
+            'authentication': {},
+            'vulnerabilities': []
+        }
     
     def full_recon(self, port_range: range = range(1, 1025)) -> Dict:
         """

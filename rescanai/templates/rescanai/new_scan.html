@@ -39,7 +39,7 @@
                 <label style="display: block; color: #00FF9C; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">
                     Scan Type
                 </label>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
                     <label style="background: #0D1117; border: 2px solid rgba(0, 191, 255, 0.3); border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s;">
                         <input type="radio" name="scan_type" value="quick" checked style="margin-right: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -74,6 +74,19 @@
                             <strong style="color: #00FF9C;">Web Scan</strong>
                         </div>
                         <p style="color: #8B949E; font-size: 0.85em; margin: 5px 0 0 0;">Web ports (80, 443, 8080, 8443)</p>
+                    </label>
+                    
+                    <label style="background: #0D1117; border: 2px solid rgba(255, 165, 0, 0.3); border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s;">
+                        <input type="radio" name="scan_type" value="localhost" style="margin-right: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFA500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                            <strong style="color: #FFA500;">Localhost</strong>
+                        </div>
+                        <p style="color: #8B949E; font-size: 0.85em; margin: 5px 0 0 0;">Local server & Django analysis</p>
                     </label>
                     
                     <label style="background: #0D1117; border: 2px solid rgba(255, 215, 0, 0.3); border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s;">
@@ -185,6 +198,14 @@ document.getElementById('scanForm').addEventListener('submit', function(e) {
         case 'web':
             portStart = 80;
             portEnd = 8443;
+            break;
+        case 'localhost':
+            // For localhost scans, set target to localhost if not already specified
+            if (!target.includes('localhost') && !target.includes('127.0.0.1')) {
+                data.target = 'localhost';
+            }
+            portStart = 8000;
+            portEnd = 9000;
             break;
         case 'custom':
             portStart = parseInt(formData.get('port_start'));
