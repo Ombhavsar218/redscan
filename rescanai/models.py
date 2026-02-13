@@ -32,7 +32,7 @@ class Scan(models.Model):
     target = models.ForeignKey(Target, on_delete=models.CASCADE, related_name='scans')
     scan_type = models.CharField(max_length=50)  # 'recon', 'vuln_scan', 'full'
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    risk_score = models.FloatField(default=0.0)  # 0-10 risk score
+    risk_score = models.FloatField(default=0.0)  # 0-100 risk score
     started_at = models.DateTimeField(default=timezone.now)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -153,3 +153,47 @@ class LocalServerData(models.Model):
     
     def __str__(self):
         return f"Local Server Scan for {self.target} (Scan {self.scan.id})"
+
+class AdvancedVulnerabilityData(models.Model):
+    """Stores advanced vulnerability scan results"""
+    scan = models.OneToOneField(Scan, on_delete=models.CASCADE, related_name='advanced_vulnerabilities')
+    
+    # SQL Injection Results
+    sql_injection_found = models.BooleanField(default=False)
+    sql_injection_details = models.JSONField(default=list, blank=True)
+    
+    # XSS Results
+    xss_vulnerabilities_found = models.BooleanField(default=False)
+    xss_details = models.JSONField(default=list, blank=True)
+    
+    # Security Headers Analysis
+    security_headers_analysis = models.JSONField(default=dict, blank=True)
+    missing_security_headers = models.JSONField(default=list, blank=True)
+    
+    # SSL/TLS Analysis
+    ssl_vulnerabilities = models.JSONField(default=list, blank=True)
+    ssl_configuration_issues = models.JSONField(default=list, blank=True)
+    
+    # Authentication Issues
+    authentication_vulnerabilities = models.JSONField(default=list, blank=True)
+    default_credentials_found = models.BooleanField(default=False)
+    
+    # Input Validation Issues
+    input_validation_issues = models.JSONField(default=list, blank=True)
+    
+    # OWASP Top 10 Assessment
+    owasp_top10_assessment = models.JSONField(default=list, blank=True)
+    
+    # Open Ports with Vulnerability Assessment
+    vulnerable_ports = models.JSONField(default=list, blank=True)
+    
+    # Overall Security Score (0-100)
+    security_score = models.FloatField(default=0.0)
+    
+    # Recommendations
+    vulnerability_recommendations = models.JSONField(default=list, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Advanced Vulnerability Scan for {self.scan.target.name} (Scan {self.scan.id})"

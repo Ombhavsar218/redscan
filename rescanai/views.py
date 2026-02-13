@@ -5,10 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.models import User
 from django.utils import timezone
-from .models import Target, Scan, Port, Vulnerability, ScanLog, WebReconData, LocalServerData
+from .models import Target, Scan, Port, Vulnerability, ScanLog, WebReconData, LocalServerData, AdvancedVulnerabilityData
 from .scanner import NetworkScanner, VulnerabilityScanner, ReconEngine, LocalReconEngine
 from .web_recon import WebsiteRecon, WebVulnerabilityScanner
-from .local_server_scanner import LocalServerScanner, DjangoSecurityAnalyzer
+from .local_server_scanner import LocalServerScanner, DjangoSecurityAnalyzer, ComprehensiveLocalhostScanner
+from .vulnerability_engine import AdvancedVulnerabilityEngine
 import json
 from threading import Thread
 
@@ -86,7 +87,15 @@ def start_scan(request):
                 }
             )
         
-        scan_type = data.get('scan_type', 'recon')
+        scan_type = data.get('scan_type', 'quick')
+        scan_options = data.get('scan_options', {})
+        
+        # Extract port range for custom scans
+        if scan_type == 'custom':
+            port_start = data.get('port_start', 1)
+            port_end = data.get('port_end', 1024)
+            scan_options['port_start'] = port_start
+            scan_options['port_end'] = port_end
         
         # Create scan record
         scan = Scan.objects.create(
@@ -96,8 +105,8 @@ def start_scan(request):
             created_by=request.user if request.user.is_authenticated else target.created_by
         )
         
-        # Run scan in background thread
-        thread = Thread(target=execute_scan, args=(scan.id,))
+        # Run scan in background thread with new modular architecture
+        thread = Thread(target=execute_modular_scan, args=(scan.id, scan_options))
         thread.start()
         
         return JsonResponse({
@@ -108,6 +117,201 @@ def start_scan(request):
     
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
+
+def execute_modular_scan(scan_id: int, scan_options: dict = None):
+    """
+    Execute scan using the new modular scanner architecture
+    This runs in a background thread
+    """
+    scan = Scan.objects.get(id=scan_id)
+    scan_options = scan_options or {}
+    
+    try:
+        scan.status = 'running'
+        scan.save()
+        
+        # Progress callback to log scan progress
+        def progress_callback(progress: int, message: str):
+            ScanLog.objects.create(
+                scan=scan,
+                level='INFO',
+                message=f"[{progress}%] {message}"
+            )
+        
+        # Import and initialize the scan controller
+        from .scan_controller import ScanController
+        
+        # Create scan controller
+        controller = ScanController(
+            target=scan.target.target_value,
+            scan_type=scan.scan_type,
+            progress_callback=progress_callback
+        )
+        
+        # Execute the scan with options
+        results = controller.execute_scan(scan_options)
+        
+        # Process and save results
+        _save_modular_scan_results(scan, results)
+        
+        # Calculate final risk score
+        risk_score = results.get('risk_score', 0.0)
+        scan.risk_score = risk_score
+        
+        # Complete the scan
+        scan.status = 'completed'
+        scan.completed_at = timezone.now()
+        scan.save()
+        
+        progress_callback(100, f"Scan completed! Risk score: {risk_score:.1f}/10")
+        
+    except Exception as e:
+        scan.status = 'failed'
+        scan.save()
+        error_message = f'Modular scan failed: {str(e)}'
+        ScanLog.objects.create(scan=scan, level='ERROR', message=error_message)
+        print(f"[ERROR] Modular scan {scan.id} failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+def _save_modular_scan_results(scan, results):
+    """
+    Save results from modular scanner to database
+    """
+    try:
+        # Save discovered ports
+        for port_num in results.get('ports', []):
+            service = results.get('services', {}).get(port_num, 'unknown')
+            
+            Port.objects.create(
+                scan=scan,
+                port_number=port_num,
+                service=service,
+                version='',  # Version detection can be added later
+                state='open'
+            )
+        
+        # Save vulnerabilities
+        for vuln in results.get('vulnerabilities', []):
+            # Try to find associated port
+            port_obj = None
+            if 'port' in vuln:
+                port_obj = Port.objects.filter(scan=scan, port_number=vuln['port']).first()
+            
+            Vulnerability.objects.create(
+                scan=scan,
+                port=port_obj,
+                title=vuln.get('type', 'Security Issue'),
+                description=vuln.get('description', 'Security vulnerability detected'),
+                severity=vuln.get('severity', 'medium').lower(),
+                remediation=vuln.get('remediation', 'Review and fix the identified security issue')
+            )
+        
+        # Save web reconnaissance data if available
+        web_data = results.get('web_data', {})
+        if web_data:
+            _save_web_recon_data(scan, web_data)
+        
+        # Save API data if available
+        api_data = results.get('api_data', {})
+        if api_data:
+            _save_api_data(scan, api_data)
+        
+        # Save localhost data if available
+        localhost_data = results.get('localhost_data', {})
+        if localhost_data:
+            _save_localhost_data(scan, localhost_data)
+            
+    except Exception as e:
+        ScanLog.objects.create(
+            scan=scan,
+            level='ERROR',
+            message=f'Error saving scan results: {str(e)}'
+        )
+
+
+def _save_web_recon_data(scan, web_data):
+    """Save web reconnaissance data"""
+    try:
+        # Extract data from different web scan components
+        headers_data = web_data.get('headers', {})
+        crawl_data = web_data.get('crawl', {})
+        tech_data = web_data.get('technologies', {})
+        
+        WebReconData.objects.create(
+            scan=scan,
+            cms=tech_data.get('cms', []),
+            frameworks=tech_data.get('frameworks', []),
+            javascript_libraries=tech_data.get('javascript_libraries', []),
+            web_servers=[tech_data.get('web_server', 'unknown')],
+            programming_languages=[],  # Can be detected later
+            analytics=[],  # Can be detected later
+            security_headers=headers_data.get('headers', {}),
+            directories=[],  # From crawl data if available
+            forms=crawl_data.get('forms', []),
+            emails=[],  # Can be extracted later
+            robots_txt_content='',  # Can be added later
+            sitemap_urls=crawl_data.get('links', [])
+        )
+    except Exception as e:
+        ScanLog.objects.create(
+            scan=scan,
+            level='ERROR',
+            message=f'Error saving web recon data: {str(e)}'
+        )
+
+
+def _save_api_data(scan, api_data):
+    """Save API scan data"""
+    try:
+        # API data can be saved to a custom model or as JSON in existing models
+        # For now, log the API findings
+        discovery_data = api_data.get('discovery', {})
+        discovered_apis = discovery_data.get('discovered_apis', [])
+        
+        if discovered_apis:
+            ScanLog.objects.create(
+                scan=scan,
+                level='INFO',
+                message=f'Discovered {len(discovered_apis)} API endpoints'
+            )
+    except Exception as e:
+        ScanLog.objects.create(
+            scan=scan,
+            level='ERROR',
+            message=f'Error saving API data: {str(e)}'
+        )
+
+
+def _save_localhost_data(scan, localhost_data):
+    """Save localhost scan data"""
+    try:
+        django_data = localhost_data.get('django', {})
+        dev_servers = localhost_data.get('dev_servers', {})
+        containers = localhost_data.get('containers', {})
+        
+        LocalServerData.objects.create(
+            scan=scan,
+            target=scan.target.target_value,
+            open_ports=scan.ports.values_list('port_number', flat=True),
+            services_detected=list(scan.ports.values_list('service', flat=True)),
+            django_detected=django_data.get('detected', False),
+            admin_panel_accessible=False,  # Can be detected later
+            debug_mode_enabled=False,  # Can be detected later
+            static_files_accessible=False,  # Can be detected later
+            accessible_urls=[],
+            security_headers={},
+            configuration_issues=[],
+            security_recommendations=[]
+        )
+    except Exception as e:
+        ScanLog.objects.create(
+            scan=scan,
+            level='ERROR',
+            message=f'Error saving localhost data: {str(e)}'
+        )
+
 
 def execute_scan(scan_id: int):
     """
@@ -136,12 +340,27 @@ def execute_scan(scan_id: int):
         elif scan.scan_type == 'full':
             port_range = range(1, 65536)
         elif scan.scan_type == 'web':
-            port_range = [80, 443, 8080, 8443, 8000, 3000, 5000]
+            # For web scans, we'll use a custom list but handle it differently
+            web_ports = [80, 443, 8080, 8443, 8000, 3000, 5000]
+            port_range = web_ports  # We'll handle this specially in the scanner
+        elif scan.scan_type == 'vulnerability':
+            port_range = range(1, 1025)  # Standard range for vulnerability scans
+        elif scan.scan_type == 'localhost':
+            port_range = range(8000, 9001)  # Localhost specific range
         else:  # custom or default
             port_range = range(1, 1025)
         
         log_progress(scan, 6, "Network scanner initialized successfully")
-        log_progress(scan, 7, f"Preparing to scan {len(port_range)} ports...")
+        
+        # Calculate port count for logging
+        if isinstance(port_range, range):
+            port_count = port_range.stop - port_range.start
+        elif isinstance(port_range, list):
+            port_count = len(port_range)
+        else:
+            port_count = "unknown number of"
+        
+        log_progress(scan, 7, f"Preparing to scan {port_count} ports...")
         log_progress(scan, 8, "Starting port enumeration...")
         log_progress(scan, 9, "Performing network discovery...")
         
@@ -178,6 +397,9 @@ def execute_scan(scan_id: int):
         # Check if it's a localhost/local server scan
         if scan.target.target_value in ['localhost', '127.0.0.1'] or scan.scan_type == 'localhost':
             execute_localhost_scan(scan, open_ports, 16)
+        # Check if it's a vulnerability-focused scan
+        elif scan.scan_type == 'vulnerability':
+            execute_vulnerability_scan(scan, open_ports, 16)
         # Check if it's primarily a web application
         elif web_ports and scan.scan_type in ['web', 'quick']:
             execute_web_scan(scan, scanner, web_ports, 16)
@@ -191,11 +413,230 @@ def execute_scan(scan_id: int):
     except Exception as e:
         scan.status = 'failed'
         scan.save()
-        ScanLog.objects.create(scan=scan, level='ERROR', message=f'Scan failed: {str(e)}')
+        error_message = f'Scan failed: {str(e)}'
+        ScanLog.objects.create(scan=scan, level='ERROR', message=error_message)
+        print(f"[ERROR] Scan {scan.id} failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 def log_progress(scan, step, message):
     """Helper function to log progress with step number"""
     ScanLog.objects.create(scan=scan, level='INFO', message=f"[{step}%] {message}")
+
+def execute_vulnerability_scan(scan, open_ports, start_step):
+    """Execute advanced vulnerability scanning with 1% increments (Steps 16-100)"""
+    step = start_step
+    
+    log_progress(scan, step, "Advanced vulnerability scanning starting...")
+    step += 1
+    
+    # Initialize advanced vulnerability engine with progress callback
+    def progress_callback(progress, message):
+        # Map the vulnerability engine's 0-100% to our remaining 84% (16-100)
+        adjusted_progress = min(16 + int(progress * 0.84), 100)
+        log_progress(scan, adjusted_progress, message)
+    
+    try:
+        vuln_engine = AdvancedVulnerabilityEngine(scan.target.target_value, progress_callback)
+        
+        log_progress(scan, step, "Initializing vulnerability detection engine...")
+        step += 1
+        
+        log_progress(scan, step, "Starting comprehensive vulnerability assessment...")
+        step += 1
+        
+        # Run the comprehensive vulnerability scan (this handles 1% increments internally)
+        results = vuln_engine.run_comprehensive_vulnerability_scan()
+        
+        # Calculate security score
+        security_score = calculate_security_score(results)
+        
+        # Save advanced vulnerability data
+        vuln_data = AdvancedVulnerabilityData.objects.create(
+            scan=scan,
+            sql_injection_found=len(results.get('sql_injection', [])) > 0,
+            sql_injection_details=results.get('sql_injection', []),
+            xss_vulnerabilities_found=len(results.get('xss_vulnerabilities', [])) > 0,
+            xss_details=results.get('xss_vulnerabilities', []),
+            security_headers_analysis=results.get('security_headers', {}),
+            ssl_vulnerabilities=results.get('ssl_vulnerabilities', []),
+            authentication_vulnerabilities=results.get('authentication_issues', []),
+            default_credentials_found=any(
+                'default credentials' in vuln.get('type', '').lower() 
+                for vuln in results.get('authentication_issues', [])
+            ),
+            input_validation_issues=results.get('input_validation', []),
+            owasp_top10_assessment=results.get('owasp_top10', []),
+            vulnerable_ports=results.get('open_ports', []),
+            security_score=security_score,
+            vulnerability_recommendations=results.get('recommendations', [])
+        )
+        
+        # Save all vulnerabilities found
+        all_vulnerabilities = []
+        
+        # Add SQL injection vulnerabilities
+        for sql_vuln in results.get('sql_injection', []):
+            all_vulnerabilities.append({
+                'type': sql_vuln.get('type', 'SQL Injection'),
+                'severity': sql_vuln.get('severity', 'critical').lower(),
+                'description': sql_vuln.get('description', 'SQL injection vulnerability detected'),
+                'url': sql_vuln.get('url', ''),
+                'parameter': sql_vuln.get('parameter', ''),
+                'payload': sql_vuln.get('payload', '')
+            })
+        
+        # Add XSS vulnerabilities
+        for xss_vuln in results.get('xss_vulnerabilities', []):
+            all_vulnerabilities.append({
+                'type': xss_vuln.get('type', 'Cross-Site Scripting'),
+                'severity': xss_vuln.get('severity', 'high').lower(),
+                'description': xss_vuln.get('description', 'XSS vulnerability detected'),
+                'url': xss_vuln.get('url', ''),
+                'parameter': xss_vuln.get('parameter', ''),
+                'payload': xss_vuln.get('payload', '')
+            })
+        
+        # Add SSL/TLS vulnerabilities
+        for ssl_vuln in results.get('ssl_vulnerabilities', []):
+            all_vulnerabilities.append({
+                'type': ssl_vuln.get('type', 'SSL/TLS Issue'),
+                'severity': ssl_vuln.get('severity', 'medium').lower(),
+                'description': ssl_vuln.get('description', 'SSL/TLS vulnerability detected')
+            })
+        
+        # Add authentication vulnerabilities
+        for auth_vuln in results.get('authentication_issues', []):
+            all_vulnerabilities.append({
+                'type': auth_vuln.get('type', 'Authentication Issue'),
+                'severity': auth_vuln.get('severity', 'high').lower(),
+                'description': auth_vuln.get('description', 'Authentication vulnerability detected'),
+                'credentials': auth_vuln.get('credentials', '')
+            })
+        
+        # Add input validation vulnerabilities
+        for input_vuln in results.get('input_validation', []):
+            all_vulnerabilities.append({
+                'type': input_vuln.get('type', 'Input Validation Issue'),
+                'severity': input_vuln.get('severity', 'medium').lower(),
+                'description': input_vuln.get('description', 'Input validation vulnerability detected')
+            })
+        
+        # Add security header issues
+        for protocol, headers in results.get('security_headers', {}).items():
+            for header, info in headers.items():
+                if not info.get('present', True) and info.get('risk'):
+                    all_vulnerabilities.append({
+                        'type': f'Missing Security Header: {header}',
+                        'severity': info.get('risk', 'medium').lower(),
+                        'description': f'Missing {header} security header in {protocol} response'
+                    })
+        
+        # Save vulnerabilities to database
+        for vuln in all_vulnerabilities:
+            # Try to find associated port if URL contains port
+            port_obj = None
+            if 'url' in vuln and vuln['url']:
+                try:
+                    from urllib.parse import urlparse
+                    parsed_url = urlparse(vuln['url'])
+                    if parsed_url.port:
+                        port_obj = Port.objects.filter(scan=scan, port_number=parsed_url.port).first()
+                except:
+                    pass
+            
+            Vulnerability.objects.create(
+                scan=scan,
+                port=port_obj,
+                title=vuln.get('type', 'Security Vulnerability'),
+                description=vuln.get('description', 'Security vulnerability detected'),
+                severity=vuln.get('severity', 'medium'),
+                remediation=get_vulnerability_remediation(vuln.get('type', ''))
+            )
+        
+        # Calculate comprehensive risk score
+        risk_score = calculate_comprehensive_risk_score(results, all_vulnerabilities)
+        
+        log_progress(scan, 100, f"Vulnerability scan completed! Found {len(all_vulnerabilities)} vulnerabilities with security score: {security_score:.1f}/100")
+        
+    except Exception as e:
+        log_progress(scan, step, f'Vulnerability scan failed: {str(e)}')
+        risk_score = 10.0  # High risk if scan fails
+    
+    # Complete the scan
+    scan.status = 'completed'
+    scan.risk_score = risk_score
+    scan.completed_at = timezone.now()
+    scan.save()
+
+def calculate_security_score(results):
+    """Calculate security score (0-100, higher is better)"""
+    base_score = 100.0
+    
+    # Deduct points for vulnerabilities
+    sql_injection_count = len(results.get('sql_injection', []))
+    xss_count = len(results.get('xss_vulnerabilities', []))
+    ssl_issues = len(results.get('ssl_vulnerabilities', []))
+    auth_issues = len(results.get('authentication_issues', []))
+    
+    # Critical vulnerabilities
+    base_score -= sql_injection_count * 20  # -20 per SQL injection
+    base_score -= xss_count * 15  # -15 per XSS
+    base_score -= auth_issues * 10  # -10 per auth issue
+    base_score -= ssl_issues * 5  # -5 per SSL issue
+    
+    # Security headers
+    missing_headers = 0
+    for protocol, headers in results.get('security_headers', {}).items():
+        for header, info in headers.items():
+            if not info.get('present', True):
+                missing_headers += 1
+    
+    base_score -= missing_headers * 2  # -2 per missing header
+    
+    # Ensure score is between 0 and 100
+    return max(0.0, min(100.0, base_score))
+
+def calculate_comprehensive_risk_score(results, vulnerabilities):
+    """Calculate comprehensive risk score (0-10, higher is worse)"""
+    risk_score = 0.0
+    
+    # Weight vulnerabilities by severity
+    severity_weights = {'critical': 3.0, 'high': 2.0, 'medium': 1.0, 'low': 0.5, 'info': 0.1}
+    
+    for vuln in vulnerabilities:
+        severity = vuln.get('severity', 'medium')
+        risk_score += severity_weights.get(severity, 1.0)
+    
+    # Additional risk for specific vulnerability types
+    if results.get('sql_injection'):
+        risk_score += 2.0  # SQL injection is critical
+    
+    if results.get('authentication_issues'):
+        for auth_issue in results['authentication_issues']:
+            if 'default credentials' in auth_issue.get('type', '').lower():
+                risk_score += 2.0  # Default credentials are critical
+    
+    # Normalize to 0-10 scale
+    return min(10.0, risk_score)
+
+def get_vulnerability_remediation(vuln_type):
+    """Get remediation advice for vulnerability type"""
+    remediation_map = {
+        'SQL Injection': 'Use parameterized queries and input validation to prevent SQL injection attacks',
+        'Cross-Site Scripting': 'Implement proper input validation, output encoding, and Content Security Policy',
+        'Missing Security Header': 'Add the missing security header to improve application security',
+        'SSL/TLS Issue': 'Update SSL/TLS configuration to use strong ciphers and protocols',
+        'Authentication Issue': 'Implement strong authentication mechanisms and remove default credentials',
+        'Input Validation Issue': 'Implement proper input validation and sanitization',
+        'Default Credentials': 'Change all default credentials to strong, unique passwords'
+    }
+    
+    for key, remediation in remediation_map.items():
+        if key.lower() in vuln_type.lower():
+            return remediation
+    
+    return 'Review and fix the identified security vulnerability according to security best practices'
 
 def execute_localhost_scan(scan, open_ports, start_step):
     """Execute comprehensive localhost scanning covering all scenarios (Steps 16-100)"""
@@ -657,7 +1098,7 @@ def execute_api_scan(scan, api_ports, start_step):
     scan.save()
 
 def scan_detail(request, scan_id):
-    """View detailed scan results"""
+    """View detailed scan results with Phase 4 Risk Scoring"""
     scan = get_object_or_404(Scan, id=scan_id)
     ports = scan.ports.all()
     vulnerabilities = scan.vulnerabilities.all()
@@ -675,6 +1116,22 @@ def scan_detail(request, scan_id):
     except:
         local_server = None
     
+    # Get advanced vulnerability data if available
+    try:
+        advanced_vulns = scan.advanced_vulnerabilities
+    except:
+        advanced_vulns = None
+    
+    # Phase 4: Get risk breakdown if available
+    risk_breakdown = None
+    if hasattr(scan, 'risk_breakdown') and scan.risk_breakdown:
+        risk_breakdown = scan.risk_breakdown
+    
+    # Phase 4: Get attack chains if available
+    attack_chains = None
+    if hasattr(scan, 'attack_chains') and scan.attack_chains:
+        attack_chains = scan.attack_chains
+    
     # Calculate statistics
     severity_counts = {
         'critical': vulnerabilities.filter(severity='critical').count(),
@@ -691,8 +1148,11 @@ def scan_detail(request, scan_id):
         'severity_counts': severity_counts,
         'web_recon': web_recon,
         'local_server': local_server,
+        'advanced_vulns': advanced_vulns,
+        'risk_breakdown': risk_breakdown,  # Phase 4
+        'attack_chains': attack_chains,     # Phase 4
     }
-    return render(request, 'rescanai/scan_detail.html', context)
+    return render(request, 'rescanai/scan_detail_professional.html', context)
 
 def scan_progress(request, scan_id):
     """View scan progress"""

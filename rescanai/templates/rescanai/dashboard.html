@@ -7,6 +7,49 @@
     </a>
 </div>
 
+<!-- Custom Delete Confirmation Modal -->
+<div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 1000; backdrop-filter: blur(5px);">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #0D1117 0%, #161B22 100%); border-radius: 16px; padding: 30px; border: 2px solid rgba(0, 255, 156, 0.3); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); min-width: 400px;">
+        <!-- Modal Header -->
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+            <div style="width: 40px; height: 40px; background: rgba(239, 68, 68, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(239, 68, 68, 0.3);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+            </div>
+            <h3 style="color: #E6EDF3; margin: 0; font-size: 1.3em; font-weight: 600;">Delete Scan</h3>
+        </div>
+        
+        <!-- Modal Content -->
+        <div style="margin-bottom: 25px;">
+            <p style="color: #8B949E; font-size: 1em; line-height: 1.5; margin: 0;">
+                Are you sure you want to delete <strong style="color: #00FF9C;" id="scanIdText">Scan #47</strong>? 
+            </p>
+            <p style="color: #ef4444; font-size: 0.9em; margin: 10px 0 0 0; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                This action cannot be undone.
+            </p>
+        </div>
+        
+        <!-- Modal Actions -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button onclick="closeDeleteModal()" style="background: rgba(139, 148, 158, 0.2); color: #8B949E; padding: 10px 20px; border-radius: 8px; border: 1px solid rgba(139, 148, 158, 0.3); font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                Cancel
+            </button>
+            <button onclick="confirmDelete()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+                Delete Scan
+            </button>
+        </div>
+    </div>
+</div>
+
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-number">{{ total_scans }}</div>
@@ -64,7 +107,7 @@
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
                         </a>
-                        <a href="#" onclick="deleteScan({{ scan.id }}); return false;" style="display: inline-block; padding: 5px 8px; background: rgba(239, 68, 68, 0.2); border-radius: 5px; text-decoration: none; border: 1px solid rgba(239, 68, 68, 0.3);" title="Delete Scan">
+                        <a href="#" onclick="showDeleteModal({{ scan.id }}); return false;" style="display: inline-block; padding: 5px 8px; background: rgba(239, 68, 68, 0.2); border-radius: 5px; text-decoration: none; border: 1px solid rgba(239, 68, 68, 0.3);" title="Delete Scan">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -87,12 +130,31 @@
 </div>
 
 <script>
-function deleteScan(scanId) {
-    if (!confirm('Are you sure you want to delete Scan #' + scanId + '? This action cannot be undone.')) {
-        return;
-    }
+let currentScanId = null;
+
+function showDeleteModal(scanId) {
+    currentScanId = scanId;
+    document.getElementById('scanIdText').textContent = 'Scan #' + scanId;
+    document.getElementById('deleteModal').style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Restore scrolling
+    currentScanId = null;
+}
+
+function confirmDelete() {
+    if (!currentScanId) return;
     
-    fetch('/scan/' + scanId + '/delete/', {
+    // Show loading state
+    const deleteBtn = document.querySelector('#deleteModal button[onclick="confirmDelete()"]');
+    const originalText = deleteBtn.textContent;
+    deleteBtn.textContent = 'Deleting...';
+    deleteBtn.disabled = true;
+    
+    fetch('/scan/' + currentScanId + '/delete/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -101,15 +163,72 @@ function deleteScan(scanId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('✅ Scan deleted successfully!');
-            location.reload();
+            closeDeleteModal();
+            // Show success message with custom styling
+            showNotification('Scan deleted successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
         } else {
-            alert('❌ Error: ' + (data.error || 'Failed to delete scan'));
+            showNotification('Error: ' + (data.error || 'Failed to delete scan'), 'error');
         }
     })
     .catch(error => {
-        alert('❌ Error deleting scan: ' + error);
+        showNotification('Error deleting scan: ' + error, 'error');
+    })
+    .finally(() => {
+        deleteBtn.textContent = originalText;
+        deleteBtn.disabled = false;
     });
 }
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 2000;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        background: ${type === 'success' ? 'linear-gradient(135deg, #00FF9C, #00CC7A)' : 'linear-gradient(135deg, #ef4444, #dc2626)'};
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Close modal when clicking outside
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('deleteModal').style.display === 'block') {
+        closeDeleteModal();
+    }
+});
 </script>
+
+<style>
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+</style>
 {% endblock %}

@@ -39,7 +39,7 @@
                 <label style="display: block; color: #00FF9C; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;">
                     Scan Type
                 </label>
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;">
+                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px;">
                     <label style="background: #0D1117; border: 2px solid rgba(0, 191, 255, 0.3); border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s;">
                         <input type="radio" name="scan_type" value="quick" checked style="margin-right: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -76,6 +76,17 @@
                         <p style="color: #8B949E; font-size: 0.85em; margin: 5px 0 0 0;">Web ports (80, 443, 8080, 8443)</p>
                     </label>
                     
+                    <label style="background: #0D1117; border: 2px solid rgba(255, 20, 147, 0.3); border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s;">
+                        <input type="radio" name="scan_type" value="vulnerability" style="margin-right: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF1493" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                            </svg>
+                            <strong style="color: #FF1493;">Vulnerability</strong>
+                        </div>
+                        <p style="color: #8B949E; font-size: 0.85em; margin: 5px 0 0 0;">SQL, XSS, Security headers</p>
+                    </label>
+                    
                     <label style="background: #0D1117; border: 2px solid rgba(255, 165, 0, 0.3); border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s;">
                         <input type="radio" name="scan_type" value="localhost" style="margin-right: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -100,6 +111,231 @@
                         </div>
                         <p style="color: #8B949E; font-size: 0.85em; margin: 5px 0 0 0;">Define your own port range</p>
                     </label>
+                </div>
+            </div>
+
+            <!-- Scan Options Panel -->
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; color: #00FF9C; font-weight: bold; margin-bottom: 15px; font-size: 1.1em;">
+                    🔹 Scan Options Panel
+                </label>
+                
+                <!-- Quick Scan Options -->
+                <div id="quickScanOptions" class="scan-options-panel" style="display: block;">
+                    <div style="background: rgba(0, 191, 255, 0.1); border-radius: 10px; padding: 20px; border-left: 4px solid #00BFFF; margin-bottom: 15px;">
+                        <h4 style="color: #00BFFF; margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00BFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                            For Quick Scan
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 191, 255, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="quick_common_ports" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Common web ports</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 191, 255, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="quick_basic_sqli" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Basic SQLi check</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 191, 255, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="quick_basic_xss" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Basic XSS check</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 191, 255, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="quick_header_analysis" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Header analysis</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Scan Options -->
+                <div id="fullScanOptions" class="scan-options-panel" style="display: none;">
+                    <div style="background: rgba(255, 0, 60, 0.1); border-radius: 10px; padding: 20px; border-left: 4px solid #FF003C; margin-bottom: 15px;">
+                        <h4 style="color: #FF003C; margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF003C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            For Full Scan
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 0, 60, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="full_all_ports" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ All 65535 ports</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 0, 60, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="full_service_detection" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Service detection</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 0, 60, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="full_os_detection" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ OS detection</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 0, 60, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="full_comprehensive_web" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Comprehensive web scan</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 0, 60, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="full_api_testing" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ API security testing</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 0, 60, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="full_vuln_assessment" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Vulnerability assessment</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Web Scan Options -->
+                <div id="webScanOptions" class="scan-options-panel" style="display: none;">
+                    <div style="background: rgba(0, 255, 156, 0.1); border-radius: 10px; padding: 20px; border-left: 4px solid #00FF9C; margin-bottom: 15px;">
+                        <h4 style="color: #00FF9C; margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00FF9C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                            For Web Scan
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 255, 156, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="web_crawling" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Web crawling</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 255, 156, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="web_sqli_testing" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ SQL injection testing</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 255, 156, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="web_xss_testing" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ XSS testing</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 255, 156, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="web_directory_enum" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Directory enumeration</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 255, 156, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="web_security_headers" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Security headers</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(0, 255, 156, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="web_tech_detection" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Technology detection</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vulnerability Scan Options -->
+                <div id="vulnerabilityScanOptions" class="scan-options-panel" style="display: none;">
+                    <div style="background: rgba(255, 20, 147, 0.1); border-radius: 10px; padding: 20px; border-left: 4px solid #FF1493; margin-bottom: 15px;">
+                        <h4 style="color: #FF1493; margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF1493" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                            </svg>
+                            For Vulnerability Scan
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 20, 147, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="vuln_sql_injection" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Advanced SQL injection</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 20, 147, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="vuln_xss_advanced" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Advanced XSS testing</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 20, 147, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="vuln_auth_bypass" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Authentication bypass</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 20, 147, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="vuln_file_inclusion" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ File inclusion testing</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 20, 147, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="vuln_command_injection" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Command injection</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 20, 147, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="vuln_owasp_top10" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ OWASP Top 10</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Localhost Scan Options -->
+                <div id="localhostScanOptions" class="scan-options-panel" style="display: none;">
+                    <div style="background: rgba(255, 165, 0, 0.1); border-radius: 10px; padding: 20px; border-left: 4px solid #FFA500; margin-bottom: 15px;">
+                        <h4 style="color: #FFA500; margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFA500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                            </svg>
+                            For Localhost Scan
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 165, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="localhost_django" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Django analysis</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 165, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="localhost_dev_servers" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Development servers</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 165, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="localhost_containers" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Container analysis</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 165, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="localhost_config_files" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Configuration files</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 165, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="localhost_debug_mode" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Debug mode detection</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 165, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="localhost_api_endpoints" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Local API endpoints</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Scan Options -->
+                <div id="customScanOptions" class="scan-options-panel" style="display: none;">
+                    <div style="background: rgba(255, 215, 0, 0.1); border-radius: 10px; padding: 20px; border-left: 4px solid #FFD700; margin-bottom: 15px;">
+                        <h4 style="color: #FFD700; margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m0 6l4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m0-6l4.2-4.2"></path>
+                            </svg>
+                            For Custom Scan
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 215, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="custom_port_scan" checked style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☑ Custom port range</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 215, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="custom_web_tests" style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☐ Include web tests</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 215, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="custom_api_tests" style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☐ Include API tests</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; background: rgba(255, 215, 0, 0.05); border-radius: 6px;">
+                                <input type="checkbox" name="custom_vuln_tests" style="transform: scale(1.2);">
+                                <span style="color: #E6EDF3;">☐ Include vulnerability tests</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -165,12 +401,46 @@ document.head.appendChild(style);
 const scanTypeRadios = document.querySelectorAll('input[name="scan_type"]');
 const customPortRange = document.getElementById('customPortRange');
 
+// Show/hide scan options panels based on scan type
+const scanOptionsPanels = {
+    'quick': document.getElementById('quickScanOptions'),
+    'full': document.getElementById('fullScanOptions'),
+    'web': document.getElementById('webScanOptions'),
+    'vulnerability': document.getElementById('vulnerabilityScanOptions'),
+    'localhost': document.getElementById('localhostScanOptions'),
+    'custom': document.getElementById('customScanOptions')
+};
+
 scanTypeRadios.forEach(radio => {
     radio.addEventListener('change', function() {
+        // Hide all scan options panels
+        Object.values(scanOptionsPanels).forEach(panel => {
+            if (panel) panel.style.display = 'none';
+        });
+        
+        // Show the relevant scan options panel
+        const selectedPanel = scanOptionsPanels[this.value];
+        if (selectedPanel) {
+            selectedPanel.style.display = 'block';
+        }
+        
+        // Show/hide custom port range
         if (this.value === 'custom') {
             customPortRange.style.display = 'block';
         } else {
             customPortRange.style.display = 'none';
+        }
+    });
+});
+
+// Update checkbox labels when checked/unchecked
+document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const label = this.parentElement.querySelector('span');
+        if (this.checked) {
+            label.textContent = label.textContent.replace('☐', '☑');
+        } else {
+            label.textContent = label.textContent.replace('☑', '☐');
         }
     });
 });
@@ -182,6 +452,15 @@ document.getElementById('scanForm').addEventListener('submit', function(e) {
     const target = formData.get('target').trim();
     const targetName = formData.get('target_name').trim() || target;
     const scanType = formData.get('scan_type');
+    
+    // Collect scan options based on scan type
+    const scanOptions = {};
+    
+    // Collect checkboxes for the selected scan type
+    const checkboxes = this.querySelectorAll(`#${scanType}ScanOptions input[type="checkbox"]`);
+    checkboxes.forEach(checkbox => {
+        scanOptions[checkbox.name] = checkbox.checked;
+    });
     
     // Determine port range based on scan type
     let portStart, portEnd;
@@ -198,6 +477,10 @@ document.getElementById('scanForm').addEventListener('submit', function(e) {
         case 'web':
             portStart = 80;
             portEnd = 8443;
+            break;
+        case 'vulnerability':
+            portStart = 1;
+            portEnd = 10000;
             break;
         case 'localhost':
             // For localhost scans, set target to localhost if not already specified
@@ -221,7 +504,8 @@ document.getElementById('scanForm').addEventListener('submit', function(e) {
         target_name: targetName,
         scan_type: scanType,
         port_start: portStart,
-        port_end: portEnd
+        port_end: portEnd,
+        scan_options: scanOptions
     };
     
     // Show loading state
@@ -229,6 +513,7 @@ document.getElementById('scanForm').addEventListener('submit', function(e) {
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D1117" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Starting scan...';
     submitBtn.disabled = true;
+    
     fetch('/scan/start/', {
         method: 'POST',
         headers: {

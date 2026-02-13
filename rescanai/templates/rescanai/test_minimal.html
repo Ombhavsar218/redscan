@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Template</title>
+</head>
+<body>
+    <h1>Scan Detail - {{ scan.target.target_value }}</h1>
+    
+    {% if ports %}
+        <h2>Open Ports</h2>
+        {% for port in ports %}
+            <div>Port {{ port.port_number }} - {{ port.service|default:"Unknown" }}</div>
+        {% endfor %}
+    {% else %}
+        <div>No ports found</div>
+    {% endif %}
+    
+    {% if vulnerabilities %}
+        <h2>Vulnerabilities</h2>
+        {% for vuln in vulnerabilities %}
+            <div>{{ vuln.title }} - {{ vuln.severity }}</div>
+        {% endfor %}
+    {% else %}
+        <div>No vulnerabilities found</div>
+    {% endif %}
+</body>
+</html>

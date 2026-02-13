@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Results - {{ scan.target.target_value }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0D1117;
+            color: #E6EDF3;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #161B22;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 255, 156, 0.2);
+        }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .badge-critical { background: #FF003C; color: white; }
+        .badge-high { background: #FF6A00; color: white; }
+        .badge-medium { background: #FFD700; color: black; }
+        .badge-low { background: #00FF9C; color: black; }
+        .port-item, .vuln-item {
+            background: #0D1117;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #00BFFF;
+        }
+        .vuln-critical { border-left-color: #FF003C; }
+        .vuln-high { border-left-color: #FF6A00; }
+        .vuln-medium { border-left-color: #FFD700; }
+        .vuln-low { border-left-color: #00BFFF; }
+        h1, h2, h3 { color: #00FF9C; }
+        .text-muted { color: #8B949E; }
+        .text-center { text-align: center; }
+        .btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 0 10px;
+            display: inline-block;
+        }
+        .btn-primary { background: #00FF9C; color: black; }
+        .btn-secondary { background: #00BFFF; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>{{ scan.target.target_value }}</h1>
+                    <div class="text-muted">
+                        Scan Type: <span style="color: #00BFFF;">{{ scan.scan_type|title }}</span> | 
+                        Status: <span style="color: {% if scan.status == 'completed' %}#00FF9C{% elif scan.status == 'running' %}#FFD700{% else %}#FF6A00{% endif %};">{{ scan.status|title }}</span>
+                    </div>
+                    <div>{{ scan.started_at|date:"Y-m-d H:i:s" }}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="text-muted">Risk Score</div>
+                    <div style="font-size: 2em; font-weight: bold; color: {% if scan.risk_score >= 7 %}#FF003C{% elif scan.risk_score >= 4 %}#FFD700{% else %}#00FF9C{% endif %};">
+                        {% if scan.risk_score > 0 %}{{ scan.risk_score|floatformat:1 }}/10{% else %}N/A{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Ports -->
+        <div class="card">
+            <h2>Open Ports ({{ ports.count }})</h2>
+            
+            {% if ports %}
+                {% for port in ports %}
+                <div class="port-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="color: #00BFFF; margin: 0;">Port {{ port.port_number }}</h3>
+                            <div>Service: {{ port.service|default:"Unknown" }} | Protocol: {{ port.protocol|upper }}</div>
+                            {% if port.version %}
+                            <div class="text-muted">Version: {{ port.version|truncatewords:10 }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if port.port_number == 21 or port.port_number == 23 or port.port_number == 445 or port.port_number == 3389 or port.port_number == 5900 %}
+                                <span class="badge badge-critical">HIGH RISK</span>
+                            {% elif port.port_number == 22 or port.port_number == 80 or port.port_number == 443 or port.port_number == 3306 or port.port_number == 5432 %}
+                                <span class="badge badge-medium">MEDIUM</span>
+                            {% else %}
+                                <span class="badge badge-low">LOW</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center" style="padding: 40px;">
+                    <div style="font-size: 3em; margin-bottom: 10px;">🔒</div>
+                    <p>No open ports discovered</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Vulnerabilities -->
+        <div class="card">
+            <h2>Vulnerabilities ({{ vulnerabilities.count }})</h2>
+            
+            {% if vulnerabilities %}
+                {% for vuln in vulnerabilities %}
+                <div class="vuln-item vuln-{{ vuln.severity }}">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                        <h3 style="margin: 0; flex: 1;">{{ vuln.title }}</h3>
+                        <span class="badge badge-{{ vuln.severity }}">{{ vuln.severity|upper }}</span>
+                    </div>
+                    
+                    <div class="text-muted" style="margin-bottom: 10px;">
+                        {% if vuln.port %}Port {{ vuln.port.port_number }} • {% endif %}
+                        {% if vuln.cvss_score %}CVSS: {{ vuln.cvss_score }}{% endif %}
+                        {% if vuln.cve_id %} • CVE: {{ vuln.cve_id }}{% endif %}
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">{{ vuln.description|truncatewords:30 }}</div>
+                    
+                    {% if vuln.remediation %}
+                    <div style="background: rgba(0, 255, 156, 0.1); padding: 15px; border-radius: 6px; border-left: 3px solid #00FF9C;">
+                        <div style="color: #00FF9C; font-weight: bold; margin-bottom: 5px;">Remediation:</div>
+                        <div>{{ vuln.remediation|truncatewords:20 }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center" style="padding: 40px;">
+                    <div style="font-size: 3em; margin-bottom: 10px;">✅</div>
+                    <p>No vulnerabilities found. Target appears secure.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="text-center" style="margin-top: 30px;">
+            <a href="/" class="btn btn-primary">Back to Dashboard</a>
+            <a href="/scan/new/" class="btn btn-secondary">New Scan</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -25,7 +25,8 @@ except ImportError:
 
 # Import local modules
 from .web_recon import WebsiteRecon, WebVulnerabilityScanner
-from .local_server_scanner import LocalServerScanner, DjangoSecurityAnalyzer
+from .local_server_scanner import LocalServerScanner, DjangoSecurityAnalyzer, ComprehensiveLocalhostScanner
+from .vulnerability_engine import AdvancedVulnerabilityEngine
 
 
 class NetworkScanner:
@@ -92,16 +93,27 @@ class NetworkScanner:
         except Exception as e:
             return (port, False, '')
     
-    def scan_ports_socket(self, port_range: range, max_workers: int = 100) -> List[int]:
+    def scan_ports_socket(self, port_range, max_workers: int = 100) -> List[int]:
         """
         Scan multiple ports concurrently using sockets
         Fallback method when Nmap is not available
+        Accepts both range objects and lists of ports
         """
-        print(f"[*] Socket scanning {self.target} ports {port_range.start}-{port_range.stop-1}...")
+        # Handle both range objects and lists
+        if isinstance(port_range, range):
+            print(f"[*] Socket scanning {self.target} ports {port_range.start}-{port_range.stop-1}...")
+            ports_to_scan = port_range
+        elif isinstance(port_range, list):
+            print(f"[*] Socket scanning {self.target} specific ports: {', '.join(map(str, port_range))}...")
+            ports_to_scan = port_range
+        else:
+            print(f"[*] Socket scanning {self.target} ports...")
+            ports_to_scan = port_range
+        
         start_time = datetime.now()
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self.scan_port_socket, port): port for port in port_range}
+            futures = {executor.submit(self.scan_port_socket, port): port for port in ports_to_scan}
             
             for future in as_completed(futures):
                 port, is_open, service = future.result()
@@ -113,20 +125,28 @@ class NetworkScanner:
         self.results['scan_time'] = (datetime.now() - start_time).total_seconds()
         return sorted(self.results['open_ports'])
     
-    def scan_ports_nmap(self, port_range: range, scan_type: str = 'default') -> List[int]:
+    def scan_ports_nmap(self, port_range, scan_type: str = 'default') -> List[int]:
         """
         Scan ports using Nmap for more accurate results
         Scan types: 'default', 'stealth', 'aggressive', 'version'
+        Accepts both range objects and lists of ports
         """
         if not self.nm:
             print("[!] Nmap not available, falling back to socket scan")
             return self.scan_ports_socket(port_range)
         
-        print(f"[*] Nmap scanning {self.target} ports {port_range.start}-{port_range.stop-1}...")
-        start_time = datetime.now()
+        # Handle both range objects and lists
+        if isinstance(port_range, range):
+            print(f"[*] Nmap scanning {self.target} ports {port_range.start}-{port_range.stop-1}...")
+            port_str = f"{port_range.start}-{port_range.stop-1}"
+        elif isinstance(port_range, list):
+            print(f"[*] Nmap scanning {self.target} specific ports: {', '.join(map(str, port_range))}...")
+            port_str = ','.join(map(str, port_range))
+        else:
+            print(f"[*] Nmap scanning {self.target} ports...")
+            port_str = str(port_range)
         
-        # Build port range string
-        port_str = f"{port_range.start}-{port_range.stop-1}"
+        start_time = datetime.now()
         
         # Select scan arguments based on type
         scan_args = {
@@ -173,10 +193,11 @@ class NetworkScanner:
         self.results['scan_time'] = (datetime.now() - start_time).total_seconds()
         return sorted(self.results['open_ports'])
     
-    def scan_ports(self, port_range: range = range(1, 1025), use_nmap: bool = True) -> List[int]:
+    def scan_ports(self, port_range=range(1, 1025), use_nmap: bool = True) -> List[int]:
         """
         Main port scanning method
         Automatically chooses best scanning method
+        Accepts both range objects and lists of ports
         """
         # Resolve target first
         if not self.resolve_target():
@@ -772,13 +793,16 @@ class ReconEngine:
     def adaptive_scan(self, scan_type: str = 'network', progress_callback=None) -> Dict:
         """
         Adaptive scanning based on target and scan type
-        Scan types: 'network', 'web', 'api', 'localhost'
+        Scan types: 'network', 'web', 'api', 'localhost', 'vulnerability'
         Features 1% increment progress tracking
         """
         if scan_type == 'localhost' or self.target in ['localhost', '127.0.0.1']:
             # Use local server scanning
             local_engine = LocalReconEngine(self.target, progress_callback)
-            return local_engine.adaptive_local_scan('localhost')
+            return local_engine.adaptive_local_scan('comprehensive')
+        
+        elif scan_type == 'vulnerability':
+            return self.vulnerability_scan_with_progress(progress_callback)
         
         elif scan_type == 'network':
             return self.network_scan_with_progress(progress_callback)
@@ -791,6 +815,12 @@ class ReconEngine:
         
         else:
             return self.full_recon()
+    
+    def vulnerability_scan_with_progress(self, progress_callback=None) -> Dict:
+        """Advanced vulnerability scanning with 1% increments"""
+        # Initialize vulnerability engine
+        vuln_engine = AdvancedVulnerabilityEngine(self.target, progress_callback)
+        return vuln_engine.run_comprehensive_vulnerability_scan()
     
     def network_scan_with_progress(self, progress_callback=None) -> Dict:
         """Network scanning with 1% increments"""
